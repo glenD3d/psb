@@ -16,8 +16,6 @@ APSB_Character::APSB_Character()
 
 }
 
-
-
 // Called when the game starts or when spawned
 void APSB_Character::BeginPlay()
 {
@@ -67,6 +65,12 @@ void APSB_Character::Crouch(const FInputActionValue& Value)
 	}
 }
 
+void APSB_Character::Jump(const FInputActionValue& Value)
+{
+	Super::Jump();
+}
+
+
 // Called every frame
 void APSB_Character::Tick(float DeltaTime)
 {
@@ -83,9 +87,8 @@ void APSB_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 		EnhancedInputComponent->BindAction(MovementAction, ETriggerEvent::Triggered, this, &APSB_Character::Move);
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APSB_Character::Look);
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &APSB_Character::Crouch);
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &APSB_Character::Jump);
 	}
-
-	//PlayerInputComponent->BindAxis(FName("MoveForward"), this, &APSB_Character::MoveForward);
 }
 
 void APSB_Character::MoveForward(float Value)
@@ -96,6 +99,3 @@ void APSB_Character::MoveForward(float Value)
 		AddMovementInput(Forward, Value);
 	}
 }
-
-
-

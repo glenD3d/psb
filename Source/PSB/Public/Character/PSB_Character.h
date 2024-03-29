@@ -7,7 +7,7 @@
 #include "InputActionValue.h"
 #include "PSB_Character.generated.h"
 
-/*Declarations*/
+//Declarations//
 class UInputMappingContext;
 class UInputAction;
 
@@ -21,8 +21,8 @@ public:
 	APSB_Character();
 
 	virtual void Tick(float DeltaTime) override;
-
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
+
 
 protected:
 
@@ -44,7 +44,11 @@ protected:
 	UPROPERTY(EditAnywhere, Category = Input)
 	UInputAction* CrouchAction;
 
+	UPROPERTY(EditAnywhere, Category = Input)
+	UInputAction* JumpAction;
+
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	void Crouch(const FInputActionValue& Value);
+	void Jump(const FInputActionValue& Value);
 };
