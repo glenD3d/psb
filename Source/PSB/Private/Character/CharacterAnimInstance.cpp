@@ -20,7 +20,7 @@ void UCharacterAnimInstance::NativeInitializeAnimation()
 	{
 		/* Is there a function that we can access? If so, let's initialize. */
 		PSB_CharacterMovement = PSB_Character->GetCharacterMovement();
-		/* Now we need to update every single frame.*/
+		
 	}
 }
 
@@ -35,5 +35,7 @@ void UCharacterAnimInstance::NativeUpdateAnimation(float DeltaTime)
 		/* If it is not null, then access the Velocity. This will be used to set the ground speed by returning the Vector Length.
 		VSizeXY is the Vector Length function in Blueprints. Now we set the Ground Speed using this function.*/		
 		GroundSpeed = UKismetMathLibrary::VSizeXY(PSB_CharacterMovement->Velocity);
+		IsFalling = PSB_CharacterMovement->IsFalling();
+		IsCrouching = PSB_CharacterMovement->IsCrouching();
 	}
 }

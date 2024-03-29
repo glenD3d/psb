@@ -19,7 +19,7 @@ public:
 	/* In Blueprints, this is Event Blueprint Initialize Animation. */
 	virtual void NativeInitializeAnimation() override;
 
-	/* In Blueprints, this is Event Blueprint Update Animation */
+	/* In Blueprints, this is Event Blueprint Update Animation. This is calculated every frame. */
 	virtual void NativeUpdateAnimation(float DeltaTime) override;
 
 
@@ -37,5 +37,11 @@ public:
 	/* Variable */
 	UPROPERTY(BlueprintReadOnly, Category = Movement)
 	float GroundSpeed;
-	
+
+	UPROPERTY(BlueprintReadOnly, Category = Movement)
+	bool IsFalling;
+
+	UPROPERTY(BlueprintReadOnly, Category = Movement)
+	bool IsCrouching;
+
 };

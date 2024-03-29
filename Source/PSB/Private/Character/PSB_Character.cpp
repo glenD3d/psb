@@ -86,7 +86,7 @@ void APSB_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	{
 		EnhancedInputComponent->BindAction(MovementAction, ETriggerEvent::Triggered, this, &APSB_Character::Move);
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APSB_Character::Look);
-		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Triggered, this, &APSB_Character::Crouch);
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &APSB_Character::Crouch);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &APSB_Character::Jump);
 	}
 }
