@@ -42,11 +42,6 @@ void APSB_Character::Move(const FInputActionValue& Value)
 	AddMovementInput(ForwardDirection, MovementVector.Y);
 	const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 	AddMovementInput(RightDirection, MovementVector.X);
-
-	//const FVector Forward = GetActorForwardVector();
-	//AddMovementInput(Forward, MovementVector.Y);
-	//const FVector Right = GetActorRightVector();
-	//AddMovementInput(Right, MovementVector.X);
 }
 
 void APSB_Character::Look(const FInputActionValue& Value)
