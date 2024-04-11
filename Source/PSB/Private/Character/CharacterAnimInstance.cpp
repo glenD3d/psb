@@ -37,5 +37,7 @@ void UCharacterAnimInstance::NativeUpdateAnimation(float DeltaTime)
 		GroundSpeed = UKismetMathLibrary::VSizeXY(PSB_CharacterMovement->Velocity);
 		IsFalling = PSB_CharacterMovement->IsFalling();
 		IsCrouching = PSB_CharacterMovement->IsCrouching();
+		// Character state Enum variable for switching animations when holding a weapon. 
+		CharacterState = PSB_Character->GetCharacterState();
 	}
 }

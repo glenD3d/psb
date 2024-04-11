@@ -7,6 +7,8 @@
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Items/Item.h"
+#include "Items/Weapons/Weapon.h"
 
 // Sets default values
 APSB_Character::APSB_Character()
@@ -27,6 +29,21 @@ void APSB_Character::BeginPlay()
 		{
 			Subsystem->AddMappingContext(PSB_CharacterContext, 0);
 		}
+	}
+}
+
+void APSB_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+	Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
+	{
+		EnhancedInputComponent->BindAction(MovementAction, ETriggerEvent::Triggered, this, &APSB_Character::Move);
+		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APSB_Character::Look);
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &APSB_Character::Crouch);
+
+		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &APSB_Character::Jump);
+		EnhancedInputComponent->BindAction(EquipAction, ETriggerEvent::Triggered, this, &APSB_Character::EKeyPressed);
 	}
 }
 
@@ -65,25 +82,22 @@ void APSB_Character::Jump(const FInputActionValue& Value)
 	Super::Jump();
 }
 
+void APSB_Character::EKeyPressed()
+{
+	AWeapon* OverlappingWeapon = Cast<AWeapon>(OverlappingItem);
+	if (OverlappingWeapon)
+	{
+		OverlappingWeapon->Equip(GetMesh(), FName("RightHandSocket"));
+		// Set Character State, it does not set the anim instance
+		CharacterState = ECharacterState::ECS_EquippedOneHandedWeapon;
+	}
+}
 
 // Called every frame
 void APSB_Character::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-}
-
-void APSB_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
-	{
-		EnhancedInputComponent->BindAction(MovementAction, ETriggerEvent::Triggered, this, &APSB_Character::Move);
-		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APSB_Character::Look);
-		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &APSB_Character::Crouch);
-		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &APSB_Character::Jump);
-	}
 }
 
 void APSB_Character::MoveForward(float Value)

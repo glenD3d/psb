@@ -4,6 +4,7 @@
 #include "Items/Item.h"
 #include "PSB/DebugMacros.h"
 #include "Components/SphereComponent.h"
+#include "Character/PSB_Character.h"
 
 // Sets default values
 AItem::AItem()
@@ -49,19 +50,19 @@ void AItem::Tick(float DeltaTime)
 
 void AItem::OnSphereOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	const FString OtherActorName = OtherActor->GetName();
-	if (GEngine)
+	APSB_Character* PSB_Character = Cast<APSB_Character>(OtherActor);
+	if (PSB_Character)
 	{
-		GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::Red, OtherActorName);
+		PSB_Character->SetOverlappingItem(this);
 	}
 }
 
 void AItem::OnSphereEndOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	const FString OtherActorName = FString("Ending Overlap with:") + OtherActor->GetName();
-	if (GEngine)
+	APSB_Character* PSB_Character = Cast<APSB_Character>(OtherActor);
+	if (PSB_Character)
 	{
-		GEngine->AddOnScreenDebugMessage(1, 5.f, FColor::Blue, OtherActorName);
+		PSB_Character->SetOverlappingItem(nullptr);
 	}
 }
 
