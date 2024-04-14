@@ -9,6 +9,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Items/Item.h"
 #include "Items/Weapons/Weapon.h"
+#include "Animation/AnimMontage.h"
 
 // Sets default values
 APSB_Character::APSB_Character()
@@ -44,11 +45,13 @@ void APSB_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &APSB_Character::Jump);
 		EnhancedInputComponent->BindAction(EquipAction, ETriggerEvent::Triggered, this, &APSB_Character::EKeyPressed);
+		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &APSB_Character::Attack);
 	}
 }
 
 void APSB_Character::Move(const FInputActionValue& Value)
 {
+	if (ActionState == EActionState::EAS_Attacking) return;
 	const FVector2D MovementVector = Value.Get<FVector2D>();
 
 	const FRotator Rotation = Controller->GetControlRotation();
@@ -93,6 +96,53 @@ void APSB_Character::EKeyPressed()
 	}
 }
 
+void APSB_Character::Attack()
+{
+	if (CanAttack())
+	{
+		PlayAttackMontage();
+		ActionState = EActionState::EAS_Attacking;
+	}
+}
+
+bool APSB_Character::CanAttack()
+{
+	return ActionState == EActionState::EAS_Unoccupied && CharacterState != ECharacterState::ECS_Unequipped;
+}
+
+void APSB_Character::PlayAttackMontage()
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance && AttackMontage)
+	{
+		AnimInstance->Montage_Play(AttackMontage);
+		// Randomly select a montage to play
+		const int32 Selection = FMath::RandRange(0, 2);
+		FName SectionName = FName();
+		switch (Selection)
+		{
+		case 0:
+			SectionName = FName("Attack1");
+			break;
+		case 1:
+			SectionName = FName("Attack2");
+			break;
+		case 2:
+			SectionName = FName("Attack3");
+		default:
+			break;
+		}
+		AnimInstance->Montage_JumpToSection(SectionName, AttackMontage);
+	}
+}
+
+void APSB_Character::AttackEnd()
+{
+	// Set attacking action state back to Unoccupied. This will allow the
+	// character to attack again.
+	ActionState = EActionState::EAS_Unoccupied;
+}
+
 // Called every frame
 void APSB_Character::Tick(float DeltaTime)
 {
@@ -100,11 +150,13 @@ void APSB_Character::Tick(float DeltaTime)
 
 }
 
-void APSB_Character::MoveForward(float Value)
-{
-	if (Controller && (Value != 0.f))
-	{
-		FVector Forward = GetActorForwardVector();
-		AddMovementInput(Forward, Value);
-	}
-}
+//void APSB_Character::MoveForward(float Value)
+//{
+//	// The character will stop moving while attacking. This may need to change to attack while moving.
+//	if (ActionState == EActionState::EAS_Attacking) return;
+//	if (Controller && (Value != 0.f))
+//	{
+//		FVector Forward = GetActorForwardVector();
+//		AddMovementInput(Forward, Value);
+//	}
+//}

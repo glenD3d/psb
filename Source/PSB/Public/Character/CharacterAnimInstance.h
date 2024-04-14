@@ -45,6 +45,7 @@ public:
 	UPROPERTY(BlueprintReadOnly, Category = Movement)
 	bool IsCrouching;
 
+	UPROPERTY(BlueprintReadOnly, Category = "Movement | Character State ")
 	ECharacterState CharacterState;
 
 };

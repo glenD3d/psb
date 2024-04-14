@@ -12,6 +12,7 @@
 class UInputMappingContext;
 class UInputAction;
 class AItem;
+class UAnimMontage;
 
 UCLASS()
 class PSB_API APSB_Character : public ACharacter
@@ -52,16 +53,33 @@ protected:
 	UPROPERTY(EditAnywhere, Category = Input)
 	UInputAction* EquipAction;
 
+	UPROPERTY(EditAnywhere, Category = Input)
+	UInputAction* AttackAction;
+
+	/* Callbacks for input*/
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 	void Crouch(const FInputActionValue& Value);
 	void Jump(const FInputActionValue& Value);
 	void EKeyPressed();
+	void Attack();
+
+	/*
+	* Play Montage Functions
+	*/
+	void PlayAttackMontage();
+
+	UFUNCTION(BlueprintCallable)
+	void AttackEnd();
+	bool CanAttack();
 
 private:
 
 	// This is for switching between animation poses when a weapon is unequipped or equipped.
 	ECharacterState CharacterState = ECharacterState::ECS_Unequipped;
+
+	UPROPERTY(BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+	EActionState ActionState = EActionState::EAS_Unoccupied;
 
 
 private:
@@ -70,6 +88,13 @@ private:
 	// To see it in the Details panel in the world at Runtime, give it the specifier VisibleInstanceOnly.
 	UPROPERTY(VisibleInstanceOnly)
 	AItem* OverlappingItem;
+
+	/**
+	* Animation Montages
+	*/
+
+	UPROPERTY(EditDefaultsOnly, Category = Montages)
+	UAnimMontage* AttackMontage;
 
 public:
 	// Good idea to keep setter and getter functions in there own public section.

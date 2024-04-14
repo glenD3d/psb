@@ -8,6 +8,12 @@
 
 class USphereComponent;
 
+enum class EItemState : uint8
+{
+	EIS_Hovering,
+	EIS_Equipped
+};
+
 UCLASS()
 class PSB_API AItem : public APawn
 {
@@ -47,6 +53,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	UStaticMeshComponent* ItemMesh;
+
+	// All items in the world wills tart out hovering.
+	EItemState ItemState = EItemState::EIS_Hovering;
 
 public:	
 	// Called to bind functionality to input
