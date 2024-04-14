@@ -51,7 +51,7 @@ void APSB_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 void APSB_Character::Move(const FInputActionValue& Value)
 {
-	if (ActionState == EActionState::EAS_Attacking) return;
+	if (ActionState != EActionState::EAS_Unoccupied) return;
 	const FVector2D MovementVector = Value.Get<FVector2D>();
 
 	const FRotator Rotation = Controller->GetControlRotation();
@@ -93,6 +93,31 @@ void APSB_Character::EKeyPressed()
 		OverlappingWeapon->Equip(GetMesh(), FName("RightHandSocket"));
 		// Set Character State, it does not set the anim instance
 		CharacterState = ECharacterState::ECS_EquippedOneHandedWeapon;
+		// Need to set overlapping item to a nullptr, we want to use the E Key for several other functions.
+		// Before setting Equip wpn, we set it to a nullptr.
+		OverlappingItem = nullptr;
+
+		// After calling Equip function and setting the character state to EquippedOneWeaponHandedWeapon, we will set EquippedWeapon.
+		// This determines that Equip Montage will only play if the character has a weapon. 
+		EquippedWeapon = OverlappingWeapon;
+	}
+	else
+	{		
+		if (CanDisarm())
+		{
+			PlayEquipMontage(FName("Unequip"));
+			CharacterState = ECharacterState::ECS_Unequipped;
+			// Disable sliding of character when unequipping a weapon.
+			ActionState = EActionState::EAS_EquippingWeapon;
+
+		}
+		else if (CanArm())
+		{
+			PlayEquipMontage(FName("Equip"));
+			CharacterState = ECharacterState::ECS_EquippedOneHandedWeapon;
+			// Disable sliding of character when equipping a weapon.
+			ActionState = EActionState::EAS_EquippingWeapon;
+		}
 	}
 }
 
@@ -108,6 +133,40 @@ void APSB_Character::Attack()
 bool APSB_Character::CanAttack()
 {
 	return ActionState == EActionState::EAS_Unoccupied && CharacterState != ECharacterState::ECS_Unequipped;
+}
+
+// This function puts the weapon away. Unequip's the weapon.
+bool APSB_Character::CanDisarm()
+{
+	// Check to see if the player is engaged in combat and check if the player has a weapon. Also check to see if the Montage is Set.
+	return ActionState == EActionState::EAS_Unoccupied && CharacterState != ECharacterState::ECS_Unequipped;
+}
+
+bool APSB_Character::CanArm()
+{
+	// EquippedWeapon will also check to see if it is a nullptr.
+	return ActionState == EActionState::EAS_Unoccupied && CharacterState == ECharacterState::ECS_Unequipped && EquippedWeapon;
+}
+
+void APSB_Character::Disarm()
+{
+	if (EquippedWeapon)
+	{
+		EquippedWeapon->AttachMeshToSocket(GetMesh(), FName("SpineSocket"));
+	}
+}
+
+void APSB_Character::Arm()
+{
+	if (EquippedWeapon)
+	{
+		EquippedWeapon->AttachMeshToSocket(GetMesh(), FName("RightHandSocket"));
+	}
+}
+
+void APSB_Character::FinishEquipping()
+{
+	ActionState = EActionState::EAS_Unoccupied;
 }
 
 void APSB_Character::PlayAttackMontage()
@@ -136,6 +195,17 @@ void APSB_Character::PlayAttackMontage()
 	}
 }
 
+void APSB_Character::PlayEquipMontage(FName SectionName)
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	// Check the AnimInstance and check to see if the Montage is Set.
+	if (AnimInstance && EquipMontage) 
+	{
+		AnimInstance->Montage_Play(EquipMontage);
+		AnimInstance->Montage_JumpToSection(SectionName, EquipMontage);
+	}
+}
+
 void APSB_Character::AttackEnd()
 {
 	// Set attacking action state back to Unoccupied. This will allow the
@@ -150,13 +220,3 @@ void APSB_Character::Tick(float DeltaTime)
 
 }
 
-//void APSB_Character::MoveForward(float Value)
-//{
-//	// The character will stop moving while attacking. This may need to change to attack while moving.
-//	if (ActionState == EActionState::EAS_Attacking) return;
-//	if (Controller && (Value != 0.f))
-//	{
-//		FVector Forward = GetActorForwardVector();
-//		AddMovementInput(Forward, Value);
-//	}
-//}
