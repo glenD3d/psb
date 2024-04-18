@@ -56,6 +56,9 @@ protected:
 
 	// All items in the world wills tart out hovering.
 	EItemState ItemState = EItemState::EIS_Hovering;
+	
+	UPROPERTY(VisibleAnywhere)
+	USphereComponent* Sphere;
 
 public:	
 	// Called to bind functionality to input
@@ -65,8 +68,7 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 	float RunningTime;
 
-	UPROPERTY(VisibleAnywhere)
-	USphereComponent* Sphere;
+
 
 };
 
