@@ -91,8 +91,16 @@ void APSB_Character::Look(const FInputActionValue& Value)
 
 void APSB_Character::OnClimbActionStarted(const FInputActionValue& Value)
 {
-	// REMOVE DEBUG WHEN SHIPPING //
-	Debug::Print(TEXT("Climb action started"));
+	if (!CustomMovementComponent) return;
+
+	if (!CustomMovementComponent->IsClimbing())
+	{
+		CustomMovementComponent->ToggleClimbing(true);
+	}
+	else
+	{
+		CustomMovementComponent->ToggleClimbing(false);
+	}
 }
 
 void APSB_Character::Crouch(const FInputActionValue& Value)
