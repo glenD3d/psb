@@ -6,17 +6,23 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "GameFramework/Character.h"
-#include "GameFramework/CharacterMovementComponent.h"
+#include "Components/CustomMovementComponent.h"
+//#include "GameFramework/CharacterMovementComponent.h"
 #include "Items/Item.h"
 #include "Items/Weapons/Weapon.h"
 #include "Animation/AnimMontage.h"
 #include "PSB/DebugMacros.h"
 
 // Sets default values
-APSB_Character::APSB_Character()
+APSB_Character::APSB_Character(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UCustomMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+
+	CustomMovementComponent = Cast<UCustomMovementComponent>(GetCharacterMovement());
+
+
 
 }
 
@@ -33,8 +39,6 @@ void APSB_Character::BeginPlay()
 			Subsystem->AddMappingContext(PSB_CharacterContext, 0);
 		}
 	}
-	// REMOVE DEBUG WHEN SHIPPING //
-	Debug::Print(TEXT("Debug Working"));
 }
 
 void APSB_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
@@ -43,13 +47,22 @@ void APSB_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
 	{
+		// Move and Looking
 		EnhancedInputComponent->BindAction(MovementAction, ETriggerEvent::Triggered, this, &APSB_Character::Move);
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APSB_Character::Look);
+
+		// Crouching
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &APSB_Character::Crouch);
 
+		// Jumping
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &APSB_Character::Jump);
+
+		// Equip and Attacking
 		EnhancedInputComponent->BindAction(EquipAction, ETriggerEvent::Triggered, this, &APSB_Character::EKeyPressed);
 		EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &APSB_Character::Attack);
+
+		// Climbing - Changed to Started. Will only happen once if the key is down and not constant if it was Triggered.
+		EnhancedInputComponent->BindAction(ClimbAction, ETriggerEvent::Started, this, &APSB_Character::OnClimbActionStarted);
 	}
 }
 
@@ -74,6 +87,12 @@ void APSB_Character::Look(const FInputActionValue& Value)
 
 	AddControllerPitchInput(LookAxisVector.Y);
 	AddControllerYawInput(LookAxisVector.X);
+}
+
+void APSB_Character::OnClimbActionStarted(const FInputActionValue& Value)
+{
+	// REMOVE DEBUG WHEN SHIPPING //
+	Debug::Print(TEXT("Climb action started"));
 }
 
 void APSB_Character::Crouch(const FInputActionValue& Value)

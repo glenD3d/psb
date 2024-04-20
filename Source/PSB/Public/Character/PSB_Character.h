@@ -15,6 +15,8 @@ class AItem;
 class UAnimMontage;
 class AWeapon;
 
+class UCustomMovementComponent;
+
 UCLASS(config=Game)
 class PSB_API APSB_Character : public ACharacter
 {
@@ -22,7 +24,7 @@ class PSB_API APSB_Character : public ACharacter
 
 public:
 	// Sets default values for this character's properties
-	APSB_Character();
+	APSB_Character(const FObjectInitializer& ObjectInitializer);
 
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
@@ -32,34 +34,46 @@ protected:
 
 	void MoveForward(float Value);
 
-protected:
+//protected:
+
+private:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-	UPROPERTY(EditAnywhere,Category = Input)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movment, meta = (AllowPrivateAccess = "true"))
+	UCustomMovementComponent* CustomMovementComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputMappingContext* PSB_CharacterContext;
 
-	UPROPERTY(EditAnywhere, Category = Input)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* MovementAction;
-
-	UPROPERTY(EditAnywhere, Category = Input)
-	UInputAction* LookAction;
-
-	UPROPERTY(EditAnywhere, Category = Input)
-	UInputAction* CrouchAction;
-
-	UPROPERTY(EditAnywhere, Category = Input)
-	UInputAction* JumpAction;
-
-	UPROPERTY(EditAnywhere, Category = Input)
-	UInputAction* EquipAction;
-
-	UPROPERTY(EditAnywhere, Category = Input)
-	UInputAction* AttackAction;
-
 	/* Callbacks for input*/
 	void Move(const FInputActionValue& Value);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* LookAction;
+	/* Callbacks for input*/
 	void Look(const FInputActionValue& Value);
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* CrouchAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* JumpAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* EquipAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* AttackAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ClimbAction;
+
+	void OnClimbActionStarted(const FInputActionValue& Value);
+	
+	/* Callbacks for input*/
 	void Crouch(const FInputActionValue& Value);
 	void Jump(const FInputActionValue& Value);
 	void EKeyPressed();
@@ -122,4 +136,6 @@ public:
 	// Good idea to keep setter and getter functions in there own public section.
 	FORCEINLINE void SetOverlappingItem(AItem* Item) { OverlappingItem = Item; }
 	FORCEINLINE ECharacterState GetCharacterState() const { return CharacterState; }
+
+	FORCEINLINE UCustomMovementComponent* GetCustomMovementComponent() const { return CustomMovementComponent; }
 };
