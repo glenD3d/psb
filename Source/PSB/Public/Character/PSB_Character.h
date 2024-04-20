@@ -15,7 +15,7 @@ class AItem;
 class UAnimMontage;
 class AWeapon;
 
-UCLASS()
+UCLASS(config=Game)
 class PSB_API APSB_Character : public ACharacter
 {
 	GENERATED_BODY()

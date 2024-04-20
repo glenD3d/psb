@@ -10,6 +10,7 @@
 #include "Items/Item.h"
 #include "Items/Weapons/Weapon.h"
 #include "Animation/AnimMontage.h"
+#include "PSB/DebugMacros.h"
 
 // Sets default values
 APSB_Character::APSB_Character()
@@ -24,6 +25,7 @@ void APSB_Character::BeginPlay()
 {
 	Super::BeginPlay();
 
+	// Add Input Mapping Context
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
@@ -31,6 +33,8 @@ void APSB_Character::BeginPlay()
 			Subsystem->AddMappingContext(PSB_CharacterContext, 0);
 		}
 	}
+	// REMOVE DEBUG WHEN SHIPPING //
+	Debug::Print(TEXT("Debug Working"));
 }
 
 void APSB_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)

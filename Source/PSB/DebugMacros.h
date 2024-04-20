@@ -11,3 +11,15 @@
 		DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::Red, true, -1.f, 0, 1.f); \
 		DrawDebugPoint(GetWorld(), EndLocation, 15.f, FColor::Red, true); \
 	}
+
+namespace Debug 
+{
+	static void Print(const FString& Msg, const FColor& Color = FColor::MakeRandomColor(), int32 InKey = -1)
+	{
+		if (GEngine)
+		{
+			GEngine->AddOnScreenDebugMessage(InKey, 6.f, Color, Msg);
+		}
+		UE_LOG(LogTemp, Warning, TEXT("%s"), *Msg);
+	}
+}
