@@ -68,17 +68,55 @@ void APSB_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 void APSB_Character::Move(const FInputActionValue& Value)
 {
+	if (!CustomMovementComponent) return;
+
+	if (CustomMovementComponent->IsClimbing())
+	{
+		HandleClimbMovementInput(Value);
+	}
+	else
+	{
+		HandleGroundMovementInput(Value);
+	}
+}
+
+void APSB_Character::HandleGroundMovementInput(const FInputActionValue& Value)
+{
 	if (ActionState != EActionState::EAS_Unoccupied) return;
+
+	// Input is a Vector 2D
 	const FVector2D MovementVector = Value.Get<FVector2D>();
 
-	const FRotator Rotation = Controller->GetControlRotation();
-	/*const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);*/
-	const FRotator YawRotation(0.f, 0.f, 0.f);
+	if(Controller != nullptr)
+	{
+		const FRotator Rotation = Controller->GetControlRotation();
+		/*const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);*/
+		const FRotator YawRotation(0.f, 0.f, 0.f);
 
-	const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+		// Add movment
+		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+
+		AddMovementInput(ForwardDirection, MovementVector.Y);
+		AddMovementInput(RightDirection, MovementVector.X);
+	}
+}
+
+void APSB_Character::HandleClimbMovementInput(const FInputActionValue& Value)
+{
+	// Input is a Vector 2D
+	const FVector2D MovementVector = Value.Get<FVector2D>();
+
+	// Get Forward Vector
+	const FVector ForwardDirection = FVector::CrossProduct(-CustomMovementComponent->GetClimbableSurfaceNormal(), GetActorRightVector());
+
+	// Get Right Vector
+	//const FVector RightDirection = FVector::CrossProduct(-CustomMovementComponent->GetClimbableSurfaceNormal(), -GetActorRightVector());
+
+	// add movement
 	AddMovementInput(ForwardDirection, MovementVector.Y);
-	const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-	AddMovementInput(RightDirection, MovementVector.X);
+	//AddMovementInput(RightDirection, MovementVector.X);
+
 }
 
 void APSB_Character::Look(const FInputActionValue& Value)

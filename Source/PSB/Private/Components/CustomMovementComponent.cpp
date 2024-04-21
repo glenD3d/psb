@@ -4,6 +4,8 @@
 #include "Components/CustomMovementComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Character/PSB_Character.h"
+#include "Components/CapsuleComponent.h"
+
 #include "PSB/DebugMacros.h"
 
 void UCustomMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -12,6 +14,65 @@ void UCustomMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 
 	/*TraceClimbableSurfaces();
 	TraceFromEyeHeight(100.f);*/
+}
+
+void UCustomMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode)
+{
+	if (IsClimbing())
+	{
+		bOrientRotationToMovement = false;
+		CharacterOwner->GetCapsuleComponent()->SetCapsuleHalfHeight(48.f);
+	}
+
+	if (PreviousMovementMode == MOVE_Custom && PreviousCustomMode == ECustomMovementMode::MOVE_Climb)
+	{
+		bOrientRotationToMovement = true;
+		CharacterOwner->GetCapsuleComponent()->SetCapsuleHalfHeight(96.f);
+
+		// Set character ability to stand again after climbing the wall. This is to ensure he is not spider-man.
+		const FRotator DirtyRotation = UpdatedComponent->GetComponentRotation();
+		const FRotator CleanStandRotation = FRotator(0.f, DirtyRotation.Yaw, 0.f);
+		UpdatedComponent->SetRelativeRotation(CleanStandRotation);
+
+
+		StopMovementImmediately();
+	}
+
+	Super::OnMovementModeChanged(PreviousMovementMode, PreviousCustomMode);
+}
+
+void UCustomMovementComponent::PhysCustom(float deltaTime, int32 Iterations)
+{
+	if (IsClimbing())
+	{
+		PhysClimb(deltaTime, Iterations);
+	}
+
+	Super::PhysCustom(deltaTime, Iterations);
+}
+
+float UCustomMovementComponent::GetMaxSpeed() const
+{
+	if (IsClimbing())
+	{
+		return MaxClimbSpeed;
+	}
+	else
+	{
+		return Super::GetMaxSpeed();
+	}
+}
+
+float UCustomMovementComponent::GetMaxAcceleration() const
+{
+	if (IsClimbing())
+	{
+		return MaxClimbAcceleration;
+	}
+	else
+	{
+		return Super::GetMaxAcceleration();
+	}
 }
 
 #pragma region ClimbTraces
@@ -92,6 +153,7 @@ void UCustomMovementComponent::ToggleClimbing(bool bEnableClimb)
 		{
 			// Enter climb state
 			Debug::Print(TEXT("Can Start Climbing"));
+			StartClimbing();
 		}
 		else
 		{
@@ -101,6 +163,7 @@ void UCustomMovementComponent::ToggleClimbing(bool bEnableClimb)
 	else
 	{
 		// Stop climbing
+		StopClimbing();
 	}
 }
 
@@ -111,6 +174,140 @@ bool UCustomMovementComponent::CanStartClimbing()
 	if (!TraceFromEyeHeight(100.f).bBlockingHit) return false;
 
 	return true;
+}
+
+void UCustomMovementComponent::StartClimbing()
+{
+	SetMovementMode(MOVE_Custom, ECustomMovementMode::MOVE_Climb);
+}
+
+void UCustomMovementComponent::StopClimbing()
+{
+	SetMovementMode(MOVE_Falling);
+}
+
+// This is similar to the Tick function, it will will be run every frame.
+void UCustomMovementComponent::PhysClimb(float deltaTime, int32 Iterations)
+{
+	if (deltaTime < MIN_TICK_TIME)
+	{
+		return;
+	}
+
+	/* Process all the climbable surfaces info */
+	TraceClimbableSurfaces();
+	ProcessClimbableSurfaceInfo();
+
+
+	/* Check if we should stop climbing */
+	if (CheckStopClimbing())
+	{
+		StopClimbing();
+	}
+
+	RestorePreAdditiveRootMotionVelocity();
+
+	if (!HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())
+	{
+		// MaxBreakClimbDeceleration default value is set in the header file.
+		//Define the Max Climb Speed and Acceleration.
+		CalcVelocity(deltaTime, 0.f, true, MaxBreakClimbDeceleration);
+	}
+
+	ApplyRootMotionToVelocity(deltaTime);
+
+	FVector OldLocation = UpdatedComponent->GetComponentLocation();
+	const FVector Adjusted = Velocity * deltaTime;
+	FHitResult Hit(1.f);
+
+	// This is the function that actually moves our character.
+	// Handle climb rotation
+	SafeMoveUpdatedComponent(Adjusted, GetClimbRotation(deltaTime), true, Hit);
+
+	if (Hit.Time < 1.f)
+	{
+		//adjust and try again
+		HandleImpact(Hit, deltaTime, Adjusted);
+		SlideAlongSurface(Adjusted, (1.f - Hit.Time), Hit.Normal, Hit, true);
+	}
+
+	if (!HasAnimRootMotion() && !CurrentRootMotion.HasOverrideVelocity())
+	{
+		Velocity = (UpdatedComponent->GetComponentLocation() - OldLocation) / deltaTime;
+	}
+
+	/* Snap movement to climbable surfaces */
+	SnapMovementToClimbableSurfaces(deltaTime);
+}
+
+// This function is run every frame, it is important that the two member variables are Zeroed out.
+void UCustomMovementComponent::ProcessClimbableSurfaceInfo()
+{
+	CurrentClimbableSurfaceLocation = FVector::ZeroVector;
+	CurrentClimbableSurfaceNormal = FVector::ZeroVector;
+
+	// This is the array
+	if (ClimbableSurfacesTracedResults.IsEmpty()) return;
+
+	// Loop through though the ClimbableSurfacesTracedResults
+	for (const FHitResult& TracedHitResult : ClimbableSurfacesTracedResults)
+	{
+		CurrentClimbableSurfaceLocation += TracedHitResult.ImpactPoint;
+		CurrentClimbableSurfaceNormal += TracedHitResult.ImpactNormal;
+	}
+
+	// Get the average location of all possible locations inside the Array
+	CurrentClimbableSurfaceLocation /= ClimbableSurfacesTracedResults.Num();
+
+	// Normalize the normal
+	CurrentClimbableSurfaceNormal = CurrentClimbableSurfaceNormal.GetSafeNormal();
+
+}
+
+bool UCustomMovementComponent::CheckStopClimbing()
+{
+	if (ClimbableSurfacesTracedResults.IsEmpty()) return true;
+
+	const float DotResult = FVector::DotProduct(CurrentClimbableSurfaceNormal, FVector::UpVector);
+	const float DegreeDiff = FMath::RadiansToDegrees(FMath::Acos(DotResult));
+
+	if (DegreeDiff <= 60.f)
+	{
+		return true;
+	}
+
+	Debug::Print(TEXT("Degree Diff:") + FString::SanitizeFloat(DegreeDiff), FColor::Cyan, 1);
+
+	return false;
+}
+
+FQuat UCustomMovementComponent::GetClimbRotation(float DeltaTime)
+{
+	const FQuat CurrentQuat = UpdatedComponent->GetComponentQuat();
+
+	if (HasAnimRootMotion() ||CurrentRootMotion.HasOverrideVelocity())
+	{
+		return CurrentQuat;
+	}
+
+	// This function returns the face normal of the climbable surface and sets the rotation.
+	const FQuat TargetQuat = FRotationMatrix::MakeFromX(-CurrentClimbableSurfaceNormal).ToQuat();
+
+	// Hard coded value of turn speed 5.f
+	return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);	
+}
+
+void UCustomMovementComponent::SnapMovementToClimbableSurfaces(float DeltaTime)
+{
+	const FVector ComponentForward = UpdatedComponent->GetForwardVector();
+	//const FVector ComponentForward = UpdatedComponent->GetRightVector();
+	const FVector ComponentLocation = UpdatedComponent->GetComponentLocation();
+
+	const FVector ProjectedCharacterToSurface = (CurrentClimbableSurfaceLocation - ComponentLocation).ProjectOnTo(ComponentForward);
+
+	const FVector SnapVector = -CurrentClimbableSurfaceNormal * ProjectedCharacterToSurface.Length();
+
+	UpdatedComponent->MoveComponent(SnapVector * DeltaTime * MaxClimbSpeed, UpdatedComponent->GetComponentQuat(), true);
 }
 
 bool UCustomMovementComponent::IsClimbing() const
@@ -131,7 +328,8 @@ bool UCustomMovementComponent::TraceClimbableSurfaces()
 	const FVector Start = UpdatedComponent->GetComponentLocation() + StartOffset;
 	const FVector End = Start + UpdatedComponent->GetForwardVector();
 
-	ClimbableSurfacesTracedResults = DoCapsuleTraceMultiByObject(Start, End, true, true);
+	// Only call the debug function for one frame since we are calling this function every frame when we start climbing. 
+	ClimbableSurfacesTracedResults = DoCapsuleTraceMultiByObject(Start, End, true);
 
 	return !ClimbableSurfacesTracedResults.IsEmpty();
 }
@@ -152,7 +350,7 @@ FHitResult UCustomMovementComponent::TraceFromEyeHeight(float TraceDistance, flo
 	//const FVector End = Start + UpdatedComponent->GetRightVector() * TraceDistance;
 	const FVector End = Start + NegatedRightVector * TraceDistance;
 
-	return DoLineTraceSingleByObject(Start, End, true, true);
+	return DoLineTraceSingleByObject(Start, End);
 }
 
 #pragma endregion

@@ -48,11 +48,17 @@ private:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* MovementAction;
+	
 	/* Callbacks for input*/
 	void Move(const FInputActionValue& Value);
 
+	void HandleGroundMovementInput(const FInputActionValue& Value);
+	void HandleClimbMovementInput(const FInputActionValue& Value);
+
+	/* Look Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* LookAction;
+	
 	/* Callbacks for input*/
 	void Look(const FInputActionValue& Value);
 
