@@ -299,8 +299,10 @@ FQuat UCustomMovementComponent::GetClimbRotation(float DeltaTime)
 
 void UCustomMovementComponent::SnapMovementToClimbableSurfaces(float DeltaTime)
 {
-	const FVector ComponentForward = UpdatedComponent->GetForwardVector();
-	//const FVector ComponentForward = UpdatedComponent->GetRightVector();
+	//const FVector ComponentForward = UpdatedComponent->GetForwardVector();
+	//MGMGMG//
+	const FVector ComponentForward = UpdatedComponent->GetRightVector();
+	//MGMGMG//
 	const FVector ComponentLocation = UpdatedComponent->GetComponentLocation();
 
 	const FVector ProjectedCharacterToSurface = (CurrentClimbableSurfaceLocation - ComponentLocation).ProjectOnTo(ComponentForward);
@@ -319,38 +321,96 @@ bool UCustomMovementComponent::IsClimbing() const
 // Trace for climbable surfaces, return true if there valid surfaces, false otherwise.
 bool UCustomMovementComponent::TraceClimbableSurfaces()
 {
+	
 	// Function to create climbable surfaces
 	// Negated Right Vector, this was originally GetForwardvector and changed to GetRightVector for the side scroller movement.
-	const FVector RightVector = UpdatedComponent->GetRightVector();
+	//const FVector RightVector = UpdatedComponent->GetRightVector();
 
-	const FVector NegatedRightVector = RightVector * -1.0f;
-	const FVector StartOffset = NegatedRightVector * 30.f;
-	const FVector Start = UpdatedComponent->GetComponentLocation() + StartOffset;
-	const FVector End = Start + UpdatedComponent->GetForwardVector();
+	const FRotator CurrentRotation = UpdatedComponent->GetRelativeRotation();
+	Debug::Print(TEXT("Rotation:") + CurrentRotation.ToString(), FColor::Green, 1);
 
-	// Only call the debug function for one frame since we are calling this function every frame when we start climbing. 
-	ClimbableSurfacesTracedResults = DoCapsuleTraceMultiByObject(Start, End, true);
+	if(CurrentRotation.Yaw == 0.f)
+	{
+		const FVector ForwardVector = UpdatedComponent->GetForwardVector();
+
+		//const FVector NegatedRightVector = RightVector * -1.0f;
+		const FVector NegatedForwardVector = ForwardVector * -1.0f;
+
+		//const FVector StartOffset = NegatedRightVector * 30.f;
+		const FVector StartFOffset = NegatedForwardVector * 30.f;
+
+		const FVector Start = UpdatedComponent->GetComponentLocation() + StartFOffset;
+		const FVector End = Start + UpdatedComponent->GetForwardVector();
+
+		// Only call the debug function for one frame since we are calling this function every frame when we start climbing. 
+		ClimbableSurfacesTracedResults = DoCapsuleTraceMultiByObject(Start, End, true, true);
+
+		//return !ClimbableSurfacesTracedResults.IsEmpty();
+	}
+	else
+	{
+		const FVector ForwardVector = UpdatedComponent->GetForwardVector();
+
+		//const FVector NegatedRightVector = RightVector * -1.0f;
+		const FVector NegatedForwardVector = ForwardVector * -1.0f;
+
+		//const FVector StartOffset = NegatedRightVector * 30.f;
+		const FVector StartOffset = ForwardVector * 30.f;
+
+		const FVector Start = UpdatedComponent->GetComponentLocation() + StartOffset;
+		const FVector End = Start + UpdatedComponent->GetForwardVector();
+
+		// Only call the debug function for one frame since we are calling this function every frame when we start climbing. 
+		ClimbableSurfacesTracedResults = DoCapsuleTraceMultiByObject(Start, End, true, true);
+
+		//return !ClimbableSurfacesTracedResults.IsEmpty();
+	}
 
 	return !ClimbableSurfacesTracedResults.IsEmpty();
+
 }
 
 // By Default the variable TraceStartOffset has a value of 0. 
 FHitResult UCustomMovementComponent::TraceFromEyeHeight(float TraceDistance, float TraceStartOffset)
 {
-	// Local Variable to get the component location
-	const FVector ComponentLocation = UpdatedComponent->GetComponentLocation();
+	const FRotator CurrentRotation = UpdatedComponent->GetRelativeRotation();
+	Debug::Print(TEXT("Rotation:") + CurrentRotation.ToString(), FColor::Green, 1);
 
-	// To trace from eye height, we need to know how much we need to offset to start trace
-	const FVector EyeHeightOffset = UpdatedComponent->GetUpVector() * (CharacterOwner->BaseEyeHeight + TraceStartOffset);
+	if (CurrentRotation.Yaw == 0.f)
+	{
+		// Local Variable to get the component location
+		const FVector ComponentLocation = UpdatedComponent->GetComponentLocation();
 
-	const FVector Start = ComponentLocation + EyeHeightOffset;
-	// This was originally GetForwardVector and changed to GetRightVector for the side scroller movement.
-	const FVector RightVector = UpdatedComponent->GetRightVector();
-	const FVector NegatedRightVector = RightVector * -1.0f;
-	//const FVector End = Start + UpdatedComponent->GetRightVector() * TraceDistance;
-	const FVector End = Start + NegatedRightVector * TraceDistance;
+		// To trace from eye height, we need to know how much we need to offset to start trace
+		const FVector EyeHeightOffset = UpdatedComponent->GetUpVector() * (CharacterOwner->BaseEyeHeight + TraceStartOffset);
 
-	return DoLineTraceSingleByObject(Start, End);
+		const FVector Start = ComponentLocation + EyeHeightOffset;
+		// This was originally GetForwardVector and changed to GetRightVector for the side scroller movement.
+		const FVector ForwardVector = UpdatedComponent->GetForwardVector();
+		const FVector NegatedForwardVector = ForwardVector * -1.0f;
+		//const FVector End = Start + UpdatedComponent->GetRightVector() * TraceDistance;
+		const FVector End = Start + NegatedForwardVector * TraceDistance;
+
+		return DoLineTraceSingleByObject(Start, End, true, true);
+	}
+	else
+	{
+		// Local Variable to get the component location
+		const FVector ComponentLocation = UpdatedComponent->GetComponentLocation();
+
+		// To trace from eye height, we need to know how much we need to offset to start trace
+		const FVector EyeHeightOffset = UpdatedComponent->GetUpVector() * (CharacterOwner->BaseEyeHeight + TraceStartOffset);
+
+		const FVector Start = ComponentLocation + EyeHeightOffset;
+		// This was originally GetForwardVector and changed to GetRightVector for the side scroller movement.
+		const FVector ForwardVector = UpdatedComponent->GetForwardVector();
+		//const FVector NegatedForwardVector = ForwardVector * -1.0f;
+		//const FVector End = Start + UpdatedComponent->GetRightVector() * TraceDistance;
+		const FVector End = Start + ForwardVector * TraceDistance;
+
+		return DoLineTraceSingleByObject(Start, End, true, true);
+	}
+
 }
 
 #pragma endregion
