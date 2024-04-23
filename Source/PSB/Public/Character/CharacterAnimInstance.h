@@ -7,6 +7,9 @@
 #include "CharacterTypes.h"
 #include "CharacterAnimInstance.generated.h"
 
+
+class APSB_Character;
+class UCustomMovementComponent;
 /**
  * 
  */
@@ -34,6 +37,9 @@ public:
 
 	UPROPERTY(BlueprintReadOnly, Category = Movement)
 	class UCharacterMovementComponent* PSB_CharacterMovement;
+
+	UPROPERTY()
+	UCustomMovementComponent* CustomMovementComponent;
 
 	/* Variable */
 	UPROPERTY(BlueprintReadOnly, Category = Movement)

@@ -28,14 +28,29 @@ void UCustomMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovem
 	{
 		bOrientRotationToMovement = true;
 		CharacterOwner->GetCapsuleComponent()->SetCapsuleHalfHeight(96.f);
+		
+		const FRotator CurrentRotation = UpdatedComponent->GetRelativeRotation();
+		Debug::Print(TEXT("Rotation:") + CurrentRotation.ToString(), FColor::Green, 1);
 
-		// Set character ability to stand again after climbing the wall. This is to ensure he is not spider-man.
-		const FRotator DirtyRotation = UpdatedComponent->GetComponentRotation();
-		const FRotator CleanStandRotation = FRotator(0.f, DirtyRotation.Yaw, 0.f);
-		UpdatedComponent->SetRelativeRotation(CleanStandRotation);
+		if (CurrentRotation.Yaw == 0.f)
+		{
+			// Set character ability to stand again after climbing the wall. This is to ensure he is not spider-man.
+			const FRotator DirtyRotation = UpdatedComponent->GetComponentRotation();
+			const FRotator CleanStandRotation = FRotator(0.f, DirtyRotation.Yaw, 0.f);
+			const FRotator NegateRotation = FRotator(0.f, CleanStandRotation.Yaw * -1.0, 0.f);
+			UpdatedComponent->SetRelativeRotation(NegateRotation);
 
+			StopMovementImmediately();
+		}
+		else
+		{
+			// Set character ability to stand again after climbing the wall. This is to ensure he is not spider-man.
+			const FRotator DirtyRotation = UpdatedComponent->GetComponentRotation();
+			const FRotator CleanStandRotation = FRotator(0.f, DirtyRotation.Yaw, 0.f);
+			UpdatedComponent->SetRelativeRotation(CleanStandRotation);
 
-		StopMovementImmediately();
+			StopMovementImmediately();
+		}
 	}
 
 	Super::OnMovementModeChanged(PreviousMovementMode, PreviousCustomMode);
@@ -200,7 +215,7 @@ void UCustomMovementComponent::PhysClimb(float deltaTime, int32 Iterations)
 
 
 	/* Check if we should stop climbing */
-	if (CheckStopClimbing())
+	if (CheckShouldStopClimbing())
 	{
 		StopClimbing();
 	}
@@ -264,7 +279,8 @@ void UCustomMovementComponent::ProcessClimbableSurfaceInfo()
 
 }
 
-bool UCustomMovementComponent::CheckStopClimbing()
+// Checks the top face with the climbing face normal and gets the Dot Product.
+bool UCustomMovementComponent::CheckShouldStopClimbing()
 {
 	if (ClimbableSurfacesTracedResults.IsEmpty()) return true;
 
@@ -279,27 +295,53 @@ bool UCustomMovementComponent::CheckStopClimbing()
 	Debug::Print(TEXT("Degree Diff:") + FString::SanitizeFloat(DegreeDiff), FColor::Cyan, 1);
 
 	return false;
+
 }
 
 FQuat UCustomMovementComponent::GetClimbRotation(float DeltaTime)
 {
-	const FQuat CurrentQuat = UpdatedComponent->GetComponentQuat();
+	const FRotator CurrentRotation = UpdatedComponent->GetRelativeRotation();
+	Debug::Print(TEXT("Rotation:") + CurrentRotation.ToString(), FColor::Green, 1);
 
-	if (HasAnimRootMotion() ||CurrentRootMotion.HasOverrideVelocity())
+	if (CurrentRotation.Yaw == 0.f)
+
 	{
-		return CurrentQuat;
+		const FQuat CurrentQuat = UpdatedComponent->GetComponentQuat();
+
+		if (HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity())
+		{
+			return CurrentQuat;
+		}
+
+		// This function returns the face normal of the climbable surface and sets the rotation.
+		// This allows the same distance from the climbable surface on either direction.
+		const FQuat TargetQuat = FRotationMatrix::MakeFromX(CurrentClimbableSurfaceNormal).ToQuat();
+
+		// Hard coded value of turn speed 5.f
+		return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);
+	}
+	else
+	{
+		const FQuat CurrentQuat = UpdatedComponent->GetComponentQuat();
+
+		if (HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity())
+		{
+			return CurrentQuat;
+		}
+
+		// This function returns the face normal of the climbable surface and sets the rotation.
+		const FQuat TargetQuat = FRotationMatrix::MakeFromX(-CurrentClimbableSurfaceNormal).ToQuat();
+
+		// Hard coded value of turn speed 5.f
+		return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);
 	}
 
-	// This function returns the face normal of the climbable surface and sets the rotation.
-	const FQuat TargetQuat = FRotationMatrix::MakeFromX(-CurrentClimbableSurfaceNormal).ToQuat();
-
-	// Hard coded value of turn speed 5.f
-	return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);	
 }
 
+// This may need an if check to check the direction of the player Yaw. 
 void UCustomMovementComponent::SnapMovementToClimbableSurfaces(float DeltaTime)
 {
-	//const FVector ComponentForward = UpdatedComponent->GetForwardVector();
+
 	//MGMGMG//
 	const FVector ComponentForward = UpdatedComponent->GetRightVector();
 	//MGMGMG//
@@ -310,6 +352,7 @@ void UCustomMovementComponent::SnapMovementToClimbableSurfaces(float DeltaTime)
 	const FVector SnapVector = -CurrentClimbableSurfaceNormal * ProjectedCharacterToSurface.Length();
 
 	UpdatedComponent->MoveComponent(SnapVector * DeltaTime * MaxClimbSpeed, UpdatedComponent->GetComponentQuat(), true);
+
 }
 
 bool UCustomMovementComponent::IsClimbing() const
@@ -337,15 +380,15 @@ bool UCustomMovementComponent::TraceClimbableSurfaces()
 		const FVector NegatedForwardVector = ForwardVector * -1.0f;
 
 		//const FVector StartOffset = NegatedRightVector * 30.f;
-		const FVector StartFOffset = NegatedForwardVector * 30.f;
+		const FVector NegatedStartOffset = NegatedForwardVector * 30.f;
 
-		const FVector Start = UpdatedComponent->GetComponentLocation() + StartFOffset;
+		const FVector Start = UpdatedComponent->GetComponentLocation() + NegatedStartOffset;
 		const FVector End = Start + UpdatedComponent->GetForwardVector();
 
 		// Only call the debug function for one frame since we are calling this function every frame when we start climbing. 
-		ClimbableSurfacesTracedResults = DoCapsuleTraceMultiByObject(Start, End, true, true);
+		ClimbableSurfacesTracedResults = DoCapsuleTraceMultiByObject(Start, End, true);
 
-		//return !ClimbableSurfacesTracedResults.IsEmpty();
+		return !ClimbableSurfacesTracedResults.IsEmpty();
 	}
 	else
 	{
@@ -361,12 +404,12 @@ bool UCustomMovementComponent::TraceClimbableSurfaces()
 		const FVector End = Start + UpdatedComponent->GetForwardVector();
 
 		// Only call the debug function for one frame since we are calling this function every frame when we start climbing. 
-		ClimbableSurfacesTracedResults = DoCapsuleTraceMultiByObject(Start, End, true, true);
+		ClimbableSurfacesTracedResults = DoCapsuleTraceMultiByObject(Start, End, true);
 
-		//return !ClimbableSurfacesTracedResults.IsEmpty();
+		return !ClimbableSurfacesTracedResults.IsEmpty();
 	}
 
-	return !ClimbableSurfacesTracedResults.IsEmpty();
+	//return !ClimbableSurfacesTracedResults.IsEmpty();
 
 }
 
@@ -391,7 +434,7 @@ FHitResult UCustomMovementComponent::TraceFromEyeHeight(float TraceDistance, flo
 		//const FVector End = Start + UpdatedComponent->GetRightVector() * TraceDistance;
 		const FVector End = Start + NegatedForwardVector * TraceDistance;
 
-		return DoLineTraceSingleByObject(Start, End, true, true);
+		return DoLineTraceSingleByObject(Start, End, false);
 	}
 	else
 	{
@@ -408,7 +451,7 @@ FHitResult UCustomMovementComponent::TraceFromEyeHeight(float TraceDistance, flo
 		//const FVector End = Start + UpdatedComponent->GetRightVector() * TraceDistance;
 		const FVector End = Start + ForwardVector * TraceDistance;
 
-		return DoLineTraceSingleByObject(Start, End, true, true);
+		return DoLineTraceSingleByObject(Start, End, false);
 	}
 
 }

@@ -21,9 +21,6 @@ APSB_Character::APSB_Character(const FObjectInitializer& ObjectInitializer)
 	PrimaryActorTick.bCanEverTick = true;
 
 	CustomMovementComponent = Cast<UCustomMovementComponent>(GetCharacterMovement());
-
-
-
 }
 
 // Called when the game starts or when spawned
@@ -116,7 +113,7 @@ void APSB_Character::HandleClimbMovementInput(const FInputActionValue& Value)
 	const FRotator CurrentRotation = Controller->GetControlRotation();
 	Debug::Print(TEXT("Rotation:") + CurrentRotation.ToString(), FColor::Green, 1);
 
-	// The if check is for the climbing function. When the player is facing a certain direction the controls nned to be the same.
+	// The if check is for the climbing function. When the player is facing a certain direction the controls need to be the same.
 	if (CurrentRotation.Yaw == 0.f)
 	{
 		// add movement
