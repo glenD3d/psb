@@ -22,32 +22,45 @@ public:
 
 	/* In Blueprints, this is Event Blueprint Initialize Animation. */
 	virtual void NativeInitializeAnimation() override;
-
+	
 	/* In Blueprints, this is Event Blueprint Update Animation. This is calculated every frame. */
 	virtual void NativeUpdateAnimation(float DeltaTime) override;
+
 
 
 	/* Create variables */
 
 	/* Forward declared variable, to expose to Blueprints it needs a UProperty. 
 	To expose it to the Event Graph, set it to BlueprintReadOnly or BlueprintReadWrite. */
-	
-	UPROPERTY(BlueprintReadOnly)
+
+private:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
 	class APSB_Character* PSB_Character;
 
-	UPROPERTY(BlueprintReadOnly, Category = Movement)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Character", meta = (AllowPrivateAccess = "true"))
 	class UCharacterMovementComponent* PSB_CharacterMovement;
 
-	UPROPERTY()
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement", meta = (AllowPrivateAccess = "true"))
 	UCustomMovementComponent* CustomMovementComponent;
 
 	/* Variable */
-	UPROPERTY(BlueprintReadOnly, Category = Movement)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Reference", meta = (AllowPrivateAccess = "true"))
 	float GroundSpeed;
+	void GetGroundSpeed();
 
-	UPROPERTY(BlueprintReadOnly, Category = Movement)
-	bool IsFalling;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Reference", meta = (AllowPrivateAccess = "true"))
+	float AirSpeed;
+	void GetAirSpeed();
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Reference", meta = (AllowPrivateAccess = "true"))
+	bool bShouldMove;
+	void GetShouldMove();
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Reference", meta = (AllowPrivateAccess = "true"))
+	bool bIsFalling;
+	void GetIsFalling();
+
+public:
 	UPROPERTY(BlueprintReadOnly, Category = Movement)
 	bool IsCrouching;
 
