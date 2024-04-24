@@ -60,11 +60,14 @@ private:
 	bool bIsFalling;
 	void GetIsFalling();
 
-public:
-	UPROPERTY(BlueprintReadOnly, Category = Movement)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Reference", meta = (AllowPrivateAccess = "true"))
 	bool IsCrouching;
 
-	UPROPERTY(BlueprintReadOnly, Category = "Movement | Character State ")
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement | Character State ", meta = (AllowPrivateAccess = "true"))
 	ECharacterState CharacterState;
+
+public:
+
+
 
 };
