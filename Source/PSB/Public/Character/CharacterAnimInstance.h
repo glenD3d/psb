@@ -61,14 +61,6 @@ private:
 	void GetIsFalling();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Reference", meta = (AllowPrivateAccess = "true"))
-	bool bIsClimbing;
-	void GetIsClimbing();
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Reference", meta = (AllowPrivateAccess = "true"))
-	FVector ClimbVelocity;
-	void GetClimbVelocity();
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Reference", meta = (AllowPrivateAccess = "true"))
 	bool IsCrouching;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement | Character State ", meta = (AllowPrivateAccess = "true"))

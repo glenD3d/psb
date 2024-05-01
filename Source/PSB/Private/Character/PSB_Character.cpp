@@ -109,8 +109,9 @@ void APSB_Character::HandleClimbMovementInput(const FInputActionValue& Value)
 
 	// Get Right Vector
 	//const FVector RightDirection = FVector::CrossProduct(-CustomMovementComponent->GetClimbableSurfaceNormal(), -GetActorRightVector());
+
 	const FRotator CurrentRotation = Controller->GetControlRotation();
-	//Debug::Print(TEXT("Rotation:") + CurrentRotation.ToString(), FColor::Green, 1);
+	Debug::Print(TEXT("Rotation:") + CurrentRotation.ToString(), FColor::Green, 1);
 
 	// The if check is for the climbing function. When the player is facing a certain direction the controls need to be the same.
 	if (CurrentRotation.Yaw == 0.f)
