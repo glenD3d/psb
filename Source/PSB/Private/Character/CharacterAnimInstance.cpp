@@ -20,7 +20,7 @@ void UCharacterAnimInstance::NativeInitializeAnimation()
 	if (PSB_Character)
 	{
 		/* Is there a function that we can access? If so, let's initialize. */
-		PSB_CharacterMovement = PSB_Character->GetCharacterMovement();
+		//PSB_CharacterMovement = PSB_Character->GetCharacterMovement();
 		// For Climbing system
 		CustomMovementComponent = PSB_Character->GetCustomMovementComponent();
 		
@@ -35,13 +35,14 @@ void UCharacterAnimInstance::NativeUpdateAnimation(float DeltaTime)
 	if (!PSB_Character || !CustomMovementComponent) return;
 
 	/* Get the character movement component.*/
-	if (PSB_CharacterMovement)
+	//if (PSB_CharacterMovement)
+	if(CustomMovementComponent)
 	{
 		/* If it is not null, then access the Velocity. This will be used to set the ground speed by returning the Vector Length.
 		VSizeXY is the Vector Length function in Blueprints. Now we set the Ground Speed using this function.*/		
-		GroundSpeed = UKismetMathLibrary::VSizeXY(PSB_CharacterMovement->Velocity);
-		bIsFalling = PSB_CharacterMovement->IsFalling();
-		IsCrouching = PSB_CharacterMovement->IsCrouching();
+		GroundSpeed = UKismetMathLibrary::VSizeXY(CustomMovementComponent->Velocity);
+		bIsFalling = CustomMovementComponent->IsFalling();
+		IsCrouching = CustomMovementComponent->IsCrouching();
 		// Character state Enum variable for switching animations when holding a weapon. 
 		CharacterState = PSB_Character->GetCharacterState();
 	}
@@ -51,6 +52,8 @@ void UCharacterAnimInstance::NativeUpdateAnimation(float DeltaTime)
 	GetAirSpeed();
 	GetShouldMove();
 	GetIsFalling();
+	GetIsClimbing();
+	GetClimbVelocity();
 }
 
 void UCharacterAnimInstance::GetGroundSpeed()
@@ -71,4 +74,14 @@ void UCharacterAnimInstance::GetShouldMove()
 void UCharacterAnimInstance::GetIsFalling()
 {
 	bIsFalling = CustomMovementComponent->IsFalling();
+}
+
+void UCharacterAnimInstance::GetIsClimbing()
+{
+	bIsClimbing = CustomMovementComponent->IsClimbing();
+}
+
+void UCharacterAnimInstance::GetClimbVelocity()
+{
+	ClimbVelocity = CustomMovementComponent->GetUnrotatedClimbVelocity();
 }
