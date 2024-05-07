@@ -24,8 +24,7 @@ void UCustomMovementComponent::TickComponent(float DeltaTime, ELevelTick TickTyp
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-	/*TraceClimbableSurfaces();
-	TraceFromEyeHeight(100.f);*/
+	CanClimbDownLedge();
 }
 
 void UCustomMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode)
@@ -46,29 +45,6 @@ void UCustomMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovem
 		UpdatedComponent->SetRelativeRotation(CleanStandRotation);
 
 		StopMovementImmediately();
-
-		//const FRotator CurrentRotation = UpdatedComponent->GetRelativeRotation();
-		//Debug::Print(TEXT("Rotation:") + CurrentRotation.ToString(), FColor::Green, 1);
-
-		//if (CurrentRotation.Yaw == 0.f)
-		//{
-		//	// Set character ability to stand again after climbing the wall. This is to ensure he is not spider-man.
-		//	const FRotator DirtyRotation = UpdatedComponent->GetComponentRotation();
-		//	const FRotator CleanStandRotation = FRotator(0.f, DirtyRotation.Yaw, 0.f);
-		//	const FRotator NegateRotation = FRotator(0.f, CleanStandRotation.Yaw * -1.0, 0.f);
-		//	UpdatedComponent->SetRelativeRotation(NegateRotation);
-
-		//	StopMovementImmediately();
-		//}
-		//else
-		//{
-		//	// Set character ability to stand again after climbing the wall. This is to ensure he is not spider-man.
-		//	const FRotator DirtyRotation = UpdatedComponent->GetComponentRotation();
-		//	const FRotator CleanStandRotation = FRotator(0.f, DirtyRotation.Yaw, 0.f);
-		//	UpdatedComponent->SetRelativeRotation(CleanStandRotation);
-
-		//	StopMovementImmediately();
-		//}
 	}
 
 	Super::OnMovementModeChanged(PreviousMovementMode, PreviousCustomMode);
@@ -106,6 +82,21 @@ float UCustomMovementComponent::GetMaxAcceleration() const
 	{
 		return Super::GetMaxAcceleration();
 	}
+}
+
+FVector UCustomMovementComponent::ConstrainAnimRootMotionVelocity(const FVector& RootMotionVelocity, const FVector& CurrentVelocity) const
+{
+	const bool bIsPlayingRMMontage = IsFalling() && OwningPlayerAnimInstance && OwningPlayerAnimInstance->IsAnyMontagePlaying();
+
+	if (bIsPlayingRMMontage)
+	{
+		return RootMotionVelocity;
+	}
+	else
+	{
+		return Super::ConstrainAnimRootMotionVelocity(RootMotionVelocity, CurrentVelocity);
+	}
+
 }
 
 #pragma region ClimbTraces
@@ -189,9 +180,9 @@ void UCustomMovementComponent::ToggleClimbing(bool bEnableClimb)
 			/*Debug::Print(TEXT("Can Start Climbing"));
 			StartClimbing();*/
 		}
-		else
+		else if(CanClimbDownLedge())
 		{
-			Debug::Print(TEXT("Can NOT Start Climbing"));
+			PlayClimbMontage(ClimbDownLedgeMontage);
 		}
 	}
 	else
@@ -208,6 +199,33 @@ bool UCustomMovementComponent::CanStartClimbing()
 	if (!TraceFromEyeHeight(100.f).bBlockingHit) return false;
 
 	return true;
+}
+
+bool UCustomMovementComponent::CanClimbDownLedge()
+{
+	if(IsFalling()) return false;
+
+	const FVector ComponentLocation = UpdatedComponent->GetComponentLocation();
+	const FVector ComponentForward = UpdatedComponent->GetForwardVector();
+	const FVector NegatedComponentForward = ComponentForward * -1.0f;
+	const FVector DownVector = -UpdatedComponent->GetUpVector();
+
+	const FVector WalkableSurfaceTraceStart = ComponentLocation + ComponentForward * ClimbDownWalkableSurfaceTraceOffset;
+	const FVector WalkableSurfaceTraceEnd = WalkableSurfaceTraceStart + DownVector * 100.f;
+
+	FHitResult WalkableSurfaceHit = DoLineTraceSingleByObject(WalkableSurfaceTraceStart, WalkableSurfaceTraceEnd, true);
+
+	const FVector LedgeTraceStart = WalkableSurfaceHit.TraceStart + ComponentForward * ClimbDownLedgeTraceOffset;
+	const FVector LedgeTraceEnd = LedgeTraceStart + DownVector * 300.f;
+
+	FHitResult LedgeTraceHit = DoLineTraceSingleByObject(LedgeTraceStart, LedgeTraceEnd, true);
+
+	if (WalkableSurfaceHit.bBlockingHit && !LedgeTraceHit.bBlockingHit)
+	{
+		return true;
+	}
+
+	return false;
 }
 
 void UCustomMovementComponent::StartClimbing()
@@ -234,7 +252,7 @@ void UCustomMovementComponent::PhysClimb(float deltaTime, int32 Iterations)
 
 
 	/* Check if we should stop climbing */
-	if (CheckShouldStopClimbing())
+	if (CheckShouldStopClimbing() || CheckHasReachedFloor())
 	{
 		StopClimbing();
 	}
@@ -272,6 +290,11 @@ void UCustomMovementComponent::PhysClimb(float deltaTime, int32 Iterations)
 
 	/* Snap movement to climbable surfaces */
 	SnapMovementToClimbableSurfaces(deltaTime);
+
+	if (CheckedHasReachedLedge())
+	{
+		PlayClimbMontage(ClimbToTopMontage);
+	}
 }
 
 // This function is run every frame, it is important that the two member variables are Zeroed out.
@@ -310,80 +333,69 @@ bool UCustomMovementComponent::CheckShouldStopClimbing()
 	{
 		return true;
 	}
+	return false;
+}
 
-	/*Debug::Print(TEXT("Degree Diff:") + FString::SanitizeFloat(DegreeDiff), FColor::Cyan, 1);*/
+bool UCustomMovementComponent::CheckHasReachedFloor()
+{
+	const FVector DownVector = -UpdatedComponent->GetUpVector();
+	const FVector StartOffset = DownVector * 50.f;
+
+	const FVector Start = UpdatedComponent->GetComponentLocation() + StartOffset;
+	const FVector End = Start + DownVector;
+
+	TArray<FHitResult> PossibleFloorHits = DoCapsuleTraceMultiByObject(Start, End);
+
+	if (PossibleFloorHits.IsEmpty()) return false;
+
+	for (const FHitResult& PossibleFloorHit : PossibleFloorHits)
+	{
+		const bool bFloorReached =
+			FVector::Parallel(-PossibleFloorHit.ImpactNormal, FVector::UpVector) &&
+			GetUnrotatedClimbVelocity().Z < -10.f;
+
+		if (bFloorReached)
+		{
+			return true;
+		}
+	}
 
 	return false;
-
 }
 
 FQuat UCustomMovementComponent::GetClimbRotation(float DeltaTime)
 {
+
 	const FRotator CurrentRotation = UpdatedComponent->GetRelativeRotation();
 
 	const FQuat CurrentQuat = UpdatedComponent->GetComponentQuat();
-
-	if (HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity())
+	if (CurrentRotation.Yaw == 0.f)
 	{
-		return CurrentQuat;
+
+		if (HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity())
+		{
+			return CurrentQuat;
+		}
+
+		const FQuat TargetQuat = FRotationMatrix::MakeFromX(CurrentClimbableSurfaceNormal).ToQuat();
+		return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);
 	}
-		if(CurrentRotation.Yaw == 0.f)
-	// This function returns the face normal of the climbable surface and sets the rotation.
+	else
+	{
+
+		if (HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity())
 		{
-			const FQuat TargetQuat = FRotationMatrix::MakeFromX(CurrentClimbableSurfaceNormal).ToQuat();
-			return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);
-		}
-		else
-		{
-			const FQuat TargetQuat = FRotationMatrix::MakeFromX(-CurrentClimbableSurfaceNormal).ToQuat();
-			return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);
+			return CurrentQuat;
 		}
 
-	// Hard coded value of turn speed 5.f
-	//return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);
-
-	//const FRotator CurrentRotation = UpdatedComponent->GetRelativeRotation();
-	//Debug::Print(TEXT("Rotation:") + CurrentRotation.ToString(), FColor::Green, 1);
-
-	//if (CurrentRotation.Yaw == 0.f)
-
-	//{
-	//	const FQuat CurrentQuat = UpdatedComponent->GetComponentQuat();
-
-	//	if (HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity())
-	//	{
-	//		return CurrentQuat;
-	//	}
-
-	//	// This function returns the face normal of the climbable surface and sets the rotation.
-	//	// This allows the same distance from the climbable surface on either direction.
-	//	const FQuat TargetQuat = FRotationMatrix::MakeFromX(CurrentClimbableSurfaceNormal).ToQuat();
-
-	//	// Hard coded value of turn speed 5.f
-	//	return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);
-	//}
-	//else
-	//{
-	//	const FQuat CurrentQuat = UpdatedComponent->GetComponentQuat();
-
-	//	if (HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity())
-	//	{
-	//		return CurrentQuat;
-	//	}
-
-	//	// This function returns the face normal of the climbable surface and sets the rotation.
-	//	const FQuat TargetQuat = FRotationMatrix::MakeFromX(-CurrentClimbableSurfaceNormal).ToQuat();
-
-	//	// Hard coded value of turn speed 5.f
-	//	return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);
-	//}
-
+		const FQuat TargetQuat = FRotationMatrix::MakeFromX(-CurrentClimbableSurfaceNormal).ToQuat();
+		return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);
+	}
 }
 
 // This may need an if check to check the direction of the player Yaw. 
 void UCustomMovementComponent::SnapMovementToClimbableSurfaces(float DeltaTime)
 {
-
 	//MGMGMG//
 	const FVector ComponentForward = UpdatedComponent->GetForwardVector();
 	//MGMGMG//
@@ -394,7 +406,27 @@ void UCustomMovementComponent::SnapMovementToClimbableSurfaces(float DeltaTime)
 	const FVector SnapVector = -CurrentClimbableSurfaceNormal * ProjectedCharacterToSurface.Length();
 
 	UpdatedComponent->MoveComponent(SnapVector * DeltaTime * MaxClimbSpeed, UpdatedComponent->GetComponentQuat(), true);
+}
 
+bool UCustomMovementComponent::CheckedHasReachedLedge()
+{
+	// This was changed from 50.f to 30.f for getting up on the ledge.
+	FHitResult LedgeHitResult = TraceFromEyeHeight(100.f, 50.f);
+	if (!LedgeHitResult.bBlockingHit)
+	{
+		const FVector WalkableSurfaceTraceStart = LedgeHitResult.TraceEnd;
+		const FVector DownVector = -UpdatedComponent->GetUpVector();
+		const FVector WalkableSurfaceTraceEnd = WalkableSurfaceTraceStart + DownVector * 100.f;
+
+		FHitResult WalkableSurfaceHitResult = DoLineTraceSingleByObject(WalkableSurfaceTraceStart, WalkableSurfaceTraceEnd);
+
+		if (WalkableSurfaceHitResult.bBlockingHit && GetUnrotatedClimbVelocity().Z>10.f)
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 bool UCustomMovementComponent::IsClimbing() const
@@ -409,21 +441,21 @@ bool UCustomMovementComponent::TraceClimbableSurfaces()
 	
 	// Function to create climbable surfaces
 	// Negated Right Vector, this was originally GetForwardvector and changed to GetRightVector for the side scroller movement.
-	const FVector RightVector = UpdatedComponent->GetRightVector();
+	//const FVector RightVector = UpdatedComponent->GetRightVector();
 
-	//const FVector ForwardVector = UpdatedComponent->GetForwardVector();
+	const FVector ForwardVector = UpdatedComponent->GetForwardVector();
 
 	//const FVector NegatedRightVector = RightVector * -1.0f;
-	const FVector NegatedForwardVector = RightVector * -1.0f;
+	//const FVector NegatedForwardVector = ForwardVector * -1.0f;
 
 	//const FVector StartOffset = NegatedRightVector * 30.f;
-	const FVector StartOffset = NegatedForwardVector * 30.f;
+	const FVector StartOffset = ForwardVector * 30.f;
 
 	const FVector Start = UpdatedComponent->GetComponentLocation() + StartOffset;
 	const FVector End = Start + UpdatedComponent->GetForwardVector();
 
 	// Only call the debug function for one frame since we are calling this function every frame when we start climbing. 
-	ClimbableSurfacesTracedResults = DoCapsuleTraceMultiByObject(Start, End);
+	ClimbableSurfacesTracedResults = DoCapsuleTraceMultiByObject(Start, End, true);
 
 	return !ClimbableSurfacesTracedResults.IsEmpty();
 
@@ -440,12 +472,12 @@ FHitResult UCustomMovementComponent::TraceFromEyeHeight(float TraceDistance, flo
 
 	const FVector Start = ComponentLocation + EyeHeightOffset;
 	// This was originally GetForwardVector and changed to GetRightVector for the side scroller movement.
-	const FVector ForwardVector = UpdatedComponent->GetRightVector();
+	const FVector ForwardVector = UpdatedComponent->GetForwardVector();
 	const FVector NegatedForwardVector = ForwardVector * -1.0f;
 	//const FVector End = Start + UpdatedComponent->GetRightVector() * TraceDistance;
-	const FVector End = Start + NegatedForwardVector * TraceDistance;
+	const FVector End = Start + ForwardVector * TraceDistance;
 
-	return DoLineTraceSingleByObject(Start, End);
+	return DoLineTraceSingleByObject(Start, End, true);
 }
 
 void UCustomMovementComponent::PlayClimbMontage(UAnimMontage* MontageToPlay)
@@ -459,9 +491,18 @@ void UCustomMovementComponent::PlayClimbMontage(UAnimMontage* MontageToPlay)
 
 void UCustomMovementComponent::OnClimbMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
-	if (Montage == IdleToClimbMontage)
+	if (Montage == IdleToClimbMontage || Montage == ClimbDownLedgeMontage)
 	{
 		StartClimbing();
+		// Zero out the velocity coming from the montage. This will ensure the character does not start moving immediately.
+		StopMovementImmediately();
+	}
+	
+	if(Montage == ClimbToTopMontage)
+	{
+		// At the end of the Climb to Top Montage, MOVE_Walking mode is striggered. 
+		SetMovementMode(MOVE_Walking);
+
 	}
 }
 

@@ -37,6 +37,7 @@ protected:
 	virtual void PhysCustom(float deltaTime, int32 Iterations) override;
 	virtual float GetMaxSpeed() const override;
 	virtual float GetMaxAcceleration() const override;
+	virtual FVector ConstrainAnimRootMotionVelocity(const FVector& RootMotionVelocity, const FVector& CurrentVelocity) const override;
 
 #pragma endregion
 
@@ -61,6 +62,8 @@ private:
 
 	void StartClimbing();
 
+	bool CanClimbDownLedge();
+
 	void StopClimbing();
 
 	void PhysClimb(float deltaTime, int32 Iterations);
@@ -69,9 +72,13 @@ private:
 
 	bool CheckShouldStopClimbing();
 
+	bool CheckHasReachedFloor();
+
 	FQuat GetClimbRotation(float DeltaTime);
 
 	void SnapMovementToClimbableSurfaces(float DeltaTime);
+
+	bool CheckedHasReachedLedge();
 
 	void PlayClimbMontage(UAnimMontage* MontageToPlay);
 
@@ -116,7 +123,20 @@ private:
 	float MaxClimbAcceleration = 300.f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Climbing", meta = (AllowPrivateAccess = "true"))
+	float ClimbDownWalkableSurfaceTraceOffset = 50.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Climbing", meta = (AllowPrivateAccess = "true"))
+	float ClimbDownLedgeTraceOffset = 50.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Climbing", meta = (AllowPrivateAccess = "true"))
 	UAnimMontage* IdleToClimbMontage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Climbing", meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* ClimbToTopMontage;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Climbing", meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* ClimbDownLedgeMontage;
+
 #pragma endregion
 	
 public:

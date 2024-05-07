@@ -87,7 +87,7 @@ void APSB_Character::HandleGroundMovementInput(const FInputActionValue& Value)
 	if(Controller != nullptr)
 	{
 		const FRotator Rotation = Controller->GetControlRotation();
-		/*const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);*/
+		//const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
 		const FRotator YawRotation(0.f, 0.f, 0.f);
 
 		// Add movment
@@ -107,8 +107,8 @@ void APSB_Character::HandleClimbMovementInput(const FInputActionValue& Value)
 	// Get Forward Vector
 	const FVector ForwardDirection = FVector::CrossProduct(-CustomMovementComponent->GetClimbableSurfaceNormal(), GetActorRightVector());
 
-	// Get Right Vector
-	//const FVector RightDirection = FVector::CrossProduct(-CustomMovementComponent->GetClimbableSurfaceNormal(), -GetActorRightVector());
+	/* Get Right Vector
+	const FVector RightDirection = FVector::CrossProduct(-CustomMovementComponent->GetClimbableSurfaceNormal(), -GetActorRightVector());*/
 
 	const FRotator CurrentRotation = Controller->GetControlRotation();
 	Debug::Print(TEXT("Rotation:") + CurrentRotation.ToString(), FColor::Green, 1);
@@ -117,12 +117,12 @@ void APSB_Character::HandleClimbMovementInput(const FInputActionValue& Value)
 	if (CurrentRotation.Yaw == 0.f)
 	{
 		// add movement
-		AddMovementInput(ForwardDirection, -MovementVector.Y);
+		AddMovementInput(ForwardDirection, -MovementVector.X);
 		//AddMovementInput(RightDirection, MovementVector.X);
 	}
 	else
 	{
-		AddMovementInput(ForwardDirection, MovementVector.Y);
+		AddMovementInput(ForwardDirection, -MovementVector.X);
 	}
 
 }
