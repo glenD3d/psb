@@ -365,22 +365,19 @@ bool UCustomMovementComponent::CheckHasReachedFloor()
 
 FQuat UCustomMovementComponent::GetClimbRotation(float DeltaTime)
 {
+	const FQuat CurrentQuat = UpdatedComponent->GetComponentQuat();
+	if (HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity())
+	{
+		return CurrentQuat;
+	}
+
+	const FQuat TargetQuat = FRotationMatrix::MakeFromX(-CurrentClimbableSurfaceNormal).ToQuat();
+	return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);
 
 	const FRotator CurrentRotation = UpdatedComponent->GetRelativeRotation();
 
-	const FQuat CurrentQuat = UpdatedComponent->GetComponentQuat();
+	/*const FQuat CurrentQuat = UpdatedComponent->GetComponentQuat();
 	if (CurrentRotation.Yaw == 0.f)
-	{
-
-		if (HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity())
-		{
-			return CurrentQuat;
-		}
-
-		const FQuat TargetQuat = FRotationMatrix::MakeFromX(CurrentClimbableSurfaceNormal).ToQuat();
-		return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);
-	}
-	else
 	{
 
 		if (HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity())
@@ -391,6 +388,17 @@ FQuat UCustomMovementComponent::GetClimbRotation(float DeltaTime)
 		const FQuat TargetQuat = FRotationMatrix::MakeFromX(-CurrentClimbableSurfaceNormal).ToQuat();
 		return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);
 	}
+	else
+	{
+
+		if (HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity())
+		{
+			return CurrentQuat;
+		}
+
+		const FQuat TargetQuat = FRotationMatrix::MakeFromX(CurrentClimbableSurfaceNormal).ToQuat();
+		return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);
+	}*/
 }
 
 // This may need an if check to check the direction of the player Yaw. 
