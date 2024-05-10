@@ -107,15 +107,15 @@ TArray<FHitResult> UCustomMovementComponent::DoCapsuleTraceMultiByObject(const F
 	TArray<FHitResult> OutCapsuleTraceHitResults;
 
 	EDrawDebugTrace::Type DebugTraceType = EDrawDebugTrace::None;
-	if (bShowDebugShape)
-	{
-		DebugTraceType = EDrawDebugTrace::ForOneFrame;
+	//if (bShowDebugShape)
+	//{
+	//	DebugTraceType = EDrawDebugTrace::ForOneFrame;
 
-		if (bDrawPersistentShapes)
-		{
-			DebugTraceType = EDrawDebugTrace::Persistent;
-		}
-	}
+	//	if (bDrawPersistentShapes)
+	//	{
+	//		DebugTraceType = EDrawDebugTrace::Persistent;
+	//	}
+	//}
 
 	// Accessing the capsule trace component from KismetSystemLibrary
 	UKismetSystemLibrary::CapsuleTraceMultiForObjects(
@@ -142,15 +142,15 @@ FHitResult UCustomMovementComponent::DoLineTraceSingleByObject(const FVector& St
 
 	EDrawDebugTrace::Type DebugTraceType = EDrawDebugTrace::None;
 
-	if (bShowDebugShape)
-	{
-		DebugTraceType = EDrawDebugTrace::ForOneFrame;
+	//if (bShowDebugShape)
+	//{
+	//	DebugTraceType = EDrawDebugTrace::ForOneFrame;
 
-		if (bDrawPersistentShapes)
-		{
-			DebugTraceType = EDrawDebugTrace::Persistent;
-		}
-	}
+	//	if (bDrawPersistentShapes)
+	//	{
+	//		DebugTraceType = EDrawDebugTrace::Persistent;
+	//	}
+	//}
 
 	UKismetSystemLibrary::LineTraceSingleForObjects(
 		this,
@@ -375,30 +375,6 @@ FQuat UCustomMovementComponent::GetClimbRotation(float DeltaTime)
 	return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);
 
 	const FRotator CurrentRotation = UpdatedComponent->GetRelativeRotation();
-
-	/*const FQuat CurrentQuat = UpdatedComponent->GetComponentQuat();
-	if (CurrentRotation.Yaw == 0.f)
-	{
-
-		if (HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity())
-		{
-			return CurrentQuat;
-		}
-
-		const FQuat TargetQuat = FRotationMatrix::MakeFromX(-CurrentClimbableSurfaceNormal).ToQuat();
-		return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);
-	}
-	else
-	{
-
-		if (HasAnimRootMotion() || CurrentRootMotion.HasOverrideVelocity())
-		{
-			return CurrentQuat;
-		}
-
-		const FQuat TargetQuat = FRotationMatrix::MakeFromX(CurrentClimbableSurfaceNormal).ToQuat();
-		return FMath::QInterpTo(CurrentQuat, TargetQuat, DeltaTime, 5.f);
-	}*/
 }
 
 // This may need an if check to check the direction of the player Yaw. 
