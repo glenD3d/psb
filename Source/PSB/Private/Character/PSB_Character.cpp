@@ -11,6 +11,8 @@
 #include "Items/Item.h"
 #include "Items/Weapons/Weapon.h"
 #include "Animation/AnimMontage.h"
+#include "MotionWarpingComponent.h"
+
 #include "PSB/DebugMacros.h"
 
 // Sets default values
@@ -21,6 +23,9 @@ APSB_Character::APSB_Character(const FObjectInitializer& ObjectInitializer)
 	PrimaryActorTick.bCanEverTick = true;
 
 	CustomMovementComponent = Cast<UCustomMovementComponent>(GetCharacterMovement());
+
+	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComp"));
+
 }
 
 // Called when the game starts or when spawned
