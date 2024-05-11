@@ -13,3 +13,5 @@ Saved
 *.suo
 *.xcodeproj
 *.xcworkspace
+/Content/AllInOneParkour/Maps
+/Content/AllInOneParkour/Demo/Mannequin
