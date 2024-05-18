@@ -33,12 +33,37 @@ void APSB_Character::BeginPlay()
 {
 	Super::BeginPlay();
 
+	AddInputMappingContext(PSB_CharacterContext, 0);
+	if (CustomMovementComponent)
+	{
+		CustomMovementComponent->OnEnterClimbStateDelegate.BindUObject(this, &ThisClass::OnPlayerEnterClimbState);
+		CustomMovementComponent->OnExitClimbStateDelegate.BindUObject(this, &ThisClass::OnPlayerExitClimbState);
+	}
+}
+
+void APSB_Character::AddInputMappingContext(UInputMappingContext* ContextToAdd, int32 InPriority)
+{
+	if (!ContextToAdd) return;
+
 	// Add Input Mapping Context
 	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
 	{
 		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
 		{
-			Subsystem->AddMappingContext(PSB_CharacterContext, 0);
+			Subsystem->AddMappingContext(ContextToAdd, InPriority);
+		}
+	}
+}
+
+void APSB_Character::RemoveInputMappingContext(UInputMappingContext* ContextToAdd)
+{
+	if (!ContextToAdd) return;
+
+	if (APlayerController* PlayerController = Cast<APlayerController>(GetController()))
+	{
+		if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(PlayerController->GetLocalPlayer()))
+		{
+			Subsystem->RemoveMappingContext(ContextToAdd);
 		}
 	}
 }
@@ -50,7 +75,8 @@ void APSB_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		// Move and Looking
-		EnhancedInputComponent->BindAction(MovementAction, ETriggerEvent::Triggered, this, &APSB_Character::Move);
+		EnhancedInputComponent->BindAction(MovementAction, ETriggerEvent::Triggered, this, &APSB_Character::HandleGroundMovementInput);
+		EnhancedInputComponent->BindAction(ClimbMoveAction, ETriggerEvent::Triggered, this, &APSB_Character::HandleClimbMovementInput);
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &APSB_Character::Look);
 
 		// Crouching
@@ -65,20 +91,9 @@ void APSB_Character::SetupPlayerInputComponent(UInputComponent* PlayerInputCompo
 
 		// Climbing - Changed to Started. Will only happen once if the key is down and not constant if it was Triggered.
 		EnhancedInputComponent->BindAction(ClimbAction, ETriggerEvent::Started, this, &APSB_Character::OnClimbActionStarted);
-	}
-}
 
-void APSB_Character::Move(const FInputActionValue& Value)
-{
-	if (!CustomMovementComponent) return;
-
-	if (CustomMovementComponent->IsClimbing())
-	{
-		HandleClimbMovementInput(Value);
-	}
-	else
-	{
-		HandleGroundMovementInput(Value);
+		// Climbing - Changed to Started. Will only happen once if the key is down and not constant if it was Triggered.
+		EnhancedInputComponent->BindAction(ClimbHopAction, ETriggerEvent::Started, this, &APSB_Character::OnClimbHopActionStarted);
 	}
 }
 
@@ -151,6 +166,24 @@ void APSB_Character::OnClimbActionStarted(const FInputActionValue& Value)
 	else
 	{
 		CustomMovementComponent->ToggleClimbing(false);
+	}
+}
+
+void APSB_Character::OnPlayerEnterClimbState()
+{
+	AddInputMappingContext(ClimbMappingContext, 1);
+}
+
+void APSB_Character::OnPlayerExitClimbState()
+{
+	RemoveInputMappingContext(ClimbMappingContext);
+}
+
+void APSB_Character::OnClimbHopActionStarted(const FInputActionValue& Value)
+{
+	if (CustomMovementComponent)
+	{
+		CustomMovementComponent->RequestHopping();
 	}
 }
 

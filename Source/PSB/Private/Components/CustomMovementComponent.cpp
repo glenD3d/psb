@@ -6,6 +6,9 @@
 #include "Character/PSB_Character.h"
 #include "Components/CapsuleComponent.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Character/PSB_Character.h"
+#include "MotionWarpingComponent.h"
+
 #include "PSB/DebugMacros.h"
 
 void UCustomMovementComponent::BeginPlay()
@@ -18,13 +21,13 @@ void UCustomMovementComponent::BeginPlay()
 		OwningPlayerAnimInstance->OnMontageEnded.AddDynamic(this, &UCustomMovementComponent::OnClimbMontageEnded);
 		OwningPlayerAnimInstance->OnMontageBlendingOut.AddDynamic(this, &UCustomMovementComponent::OnClimbMontageEnded);
 	}
+
+	OwningPlayerCharacter =  Cast<APSB_Character>(CharacterOwner);
 }
 
 void UCustomMovementComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	//CanClimbDownLedge();
 }
 
 void UCustomMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovementMode, uint8 PreviousCustomMode)
@@ -33,6 +36,8 @@ void UCustomMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovem
 	{
 		bOrientRotationToMovement = false;
 		CharacterOwner->GetCapsuleComponent()->SetCapsuleHalfHeight(48.f);
+
+		OnEnterClimbStateDelegate.ExecuteIfBound();
 	}
 
 	if (PreviousMovementMode == MOVE_Custom && PreviousCustomMode == ECustomMovementMode::MOVE_Climb)
@@ -45,6 +50,8 @@ void UCustomMovementComponent::OnMovementModeChanged(EMovementMode PreviousMovem
 		UpdatedComponent->SetRelativeRotation(CleanStandRotation);
 
 		StopMovementImmediately();
+
+		OnExitClimbStateDelegate.ExecuteIfBound();
 	}
 
 	Super::OnMovementModeChanged(PreviousMovementMode, PreviousCustomMode);
@@ -107,15 +114,15 @@ TArray<FHitResult> UCustomMovementComponent::DoCapsuleTraceMultiByObject(const F
 	TArray<FHitResult> OutCapsuleTraceHitResults;
 
 	EDrawDebugTrace::Type DebugTraceType = EDrawDebugTrace::None;
-	//if (bShowDebugShape)
-	//{
-	//	DebugTraceType = EDrawDebugTrace::ForOneFrame;
+	if (bShowDebugShape)
+	{
+		DebugTraceType = EDrawDebugTrace::ForOneFrame;
 
-	//	if (bDrawPersistentShapes)
-	//	{
-	//		DebugTraceType = EDrawDebugTrace::Persistent;
-	//	}
-	//}
+		if (bDrawPersistentShapes)
+		{
+			DebugTraceType = EDrawDebugTrace::Persistent;
+		}
+	}
 
 	// Accessing the capsule trace component from KismetSystemLibrary
 	UKismetSystemLibrary::CapsuleTraceMultiForObjects(
@@ -142,15 +149,15 @@ FHitResult UCustomMovementComponent::DoLineTraceSingleByObject(const FVector& St
 
 	EDrawDebugTrace::Type DebugTraceType = EDrawDebugTrace::None;
 
-	//if (bShowDebugShape)
-	//{
-	//	DebugTraceType = EDrawDebugTrace::ForOneFrame;
+	if (bShowDebugShape)
+	{
+		DebugTraceType = EDrawDebugTrace::ForOneFrame;
 
-	//	if (bDrawPersistentShapes)
-	//	{
-	//		DebugTraceType = EDrawDebugTrace::Persistent;
-	//	}
-	//}
+		if (bDrawPersistentShapes)
+		{
+			DebugTraceType = EDrawDebugTrace::Persistent;
+		}
+	}
 
 	UKismetSystemLibrary::LineTraceSingleForObjects(
 		this,
@@ -184,8 +191,13 @@ void UCustomMovementComponent::ToggleClimbing(bool bEnableClimb)
 		{
 			PlayClimbMontage(ClimbDownLedgeMontage);
 		}
+		else
+		{
+			TryStartVaulting();
+		}
 	}
-	else
+
+	if(!bEnableClimb)
 	{
 		// Stop climbing
 		StopClimbing();
@@ -413,6 +425,68 @@ bool UCustomMovementComponent::CheckedHasReachedLedge()
 	return false;
 }
 
+// Start of Vaulting Movement
+void UCustomMovementComponent::TryStartVaulting()
+{
+	FVector VaultStartPosition;
+	FVector VaultLandPosition;
+
+	if (CanStartVaulting(VaultStartPosition, VaultLandPosition))
+	{
+		
+		SetMotionWarpTarget(FName("VaultStartPoint"), VaultStartPosition);
+		SetMotionWarpTarget(FName("VaultLandPoint"), VaultLandPosition);
+
+		// Start Climbing changes to the Movement Mode to ignore gravity.
+		StartClimbing();
+		PlayClimbMontage(VaultMontage);
+	}
+}
+
+bool UCustomMovementComponent::CanStartVaulting(FVector& OutVaultStartPosition, FVector& OutVaultLandPosition)
+{
+	if (IsFalling()) return false;
+
+	OutVaultStartPosition = FVector::ZeroVector;
+	OutVaultLandPosition = FVector::ZeroVector;
+
+	const FVector ComponentLocation = UpdatedComponent->GetComponentLocation();
+	const FVector ComponentForward = UpdatedComponent->GetForwardVector();
+	const FVector UpVector = UpdatedComponent->GetUpVector();
+	const FVector DownVector = -UpdatedComponent->GetUpVector();
+
+	for (int32 i = 0; i < 5; i++)
+	{
+		// Trace Start
+		const FVector Start = ComponentLocation + UpVector * 100.f + ComponentForward * 80.f * (i+1);
+
+		// Trace End
+		const FVector End = Start + DownVector * 100.f * (i + 1);
+
+		FHitResult VaultTraceHit = DoLineTraceSingleByObject(Start, End);
+
+		if (i == 0 && VaultTraceHit.bBlockingHit)
+		{
+			OutVaultStartPosition = VaultTraceHit.ImpactPoint;
+		}
+
+		if (i == 3 && VaultTraceHit.bBlockingHit)
+		{
+			OutVaultLandPosition = VaultTraceHit.ImpactPoint;
+		}
+	}
+
+	if (OutVaultStartPosition != FVector::ZeroVector && OutVaultLandPosition != FVector::ZeroVector)
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}	
+}
+
+// Climbing Movement
 bool UCustomMovementComponent::IsClimbing() const
 {
 	return MovementMode == MOVE_Custom && CustomMovementMode == ECustomMovementMode::MOVE_Climb;
@@ -439,7 +513,7 @@ bool UCustomMovementComponent::TraceClimbableSurfaces()
 	const FVector End = Start + UpdatedComponent->GetForwardVector();
 
 	// Only call the debug function for one frame since we are calling this function every frame when we start climbing. 
-	ClimbableSurfacesTracedResults = DoCapsuleTraceMultiByObject(Start, End, true);
+	ClimbableSurfacesTracedResults = DoCapsuleTraceMultiByObject(Start, End);
 
 	return !ClimbableSurfacesTracedResults.IsEmpty();
 
@@ -461,7 +535,7 @@ FHitResult UCustomMovementComponent::TraceFromEyeHeight(float TraceDistance, flo
 	//const FVector End = Start + UpdatedComponent->GetRightVector() * TraceDistance;
 	const FVector End = Start + ForwardVector * TraceDistance;
 
-	return DoLineTraceSingleByObject(Start, End, true);
+	return DoLineTraceSingleByObject(Start, End);
 }
 
 void UCustomMovementComponent::PlayClimbMontage(UAnimMontage* MontageToPlay)
@@ -482,12 +556,40 @@ void UCustomMovementComponent::OnClimbMontageEnded(UAnimMontage* Montage, bool b
 		StopMovementImmediately();
 	}
 	
-	if(Montage == ClimbToTopMontage)
+	if(Montage == ClimbToTopMontage || Montage == VaultMontage)
 	{
 		// At the end of the Climb to Top Montage, MOVE_Walking mode is striggered. 
 		SetMovementMode(MOVE_Walking);
 
 	}
+}
+
+void UCustomMovementComponent::RequestHopping()
+{
+	const FVector UnrotatedLastInputVector = UKismetMathLibrary::Quat_UnrotateVector(UpdatedComponent->GetComponentQuat(), GetLastInputVector());
+
+	const float DotResult = FVector::DotProduct(UnrotatedLastInputVector.GetSafeNormal(), FVector::UpVector);
+	//Debug::Print(TEXT("Dot Result: ") + FString::SanitizeFloat(DotResult));
+
+	//if (DotResult >= 0.9f)
+	//{
+	//	Debug::Print(TEXT("Hop Up"));
+	//}
+	//else if (DotResult <= -0.9f)
+	//{
+	//	Debug::Print(TEXT("Hop Down"));
+	//}
+	//else
+	//{
+	//	Debug::Print(TEXT("Invalid Input Range"));
+	//}
+}
+
+void UCustomMovementComponent::SetMotionWarpTarget(const FName& InWarpTargetName, const FVector& InTargetPosition)
+{
+	if (!OwningPlayerCharacter) return;
+
+	OwningPlayerCharacter->GetMotionWarpingComponent()->AddOrUpdateWarpTargetFromLocation(InWarpTargetName, InTargetPosition);
 }
 
 FVector UCustomMovementComponent::GetUnrotatedClimbVelocity() const

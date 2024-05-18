@@ -30,16 +30,13 @@ public:
 	virtual void Tick(float DeltaTime) override;
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-
 protected:
 
 	void MoveForward(float Value);
 
-//protected:
-
 private:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
+
+#pragma region Components
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
 	UCustomMovementComponent* CustomMovementComponent;
@@ -47,24 +44,29 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
 	UMotionWarpingComponent* MotionWarpingComponent;
 
+#pragma endregion
+
+#pragma region Input
+
+	void OnPlayerEnterClimbState();
+
+	void OnPlayerExitClimbState();
+
+	void AddInputMappingContext(UInputMappingContext* ContextToAdd, int32 InPriority);
+
+	void RemoveInputMappingContext(UInputMappingContext* ContextToAdd);
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputMappingContext* PSB_CharacterContext;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* MovementAction;
-	
-	/* Callbacks for input*/
-	void Move(const FInputActionValue& Value);
+	UInputMappingContext* ClimbMappingContext;
 
-	void HandleGroundMovementInput(const FInputActionValue& Value);
-	void HandleClimbMovementInput(const FInputActionValue& Value);
-
-	/* Look Action */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
-	UInputAction* LookAction;
-	
-	/* Callbacks for input*/
-	void Look(const FInputActionValue& Value);
+	UInputAction* MovementAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ClimbMoveAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* CrouchAction;
@@ -81,13 +83,40 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	UInputAction* ClimbAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* ClimbHopAction;
+
+	/* Look Action */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	UInputAction* LookAction;
+
+#pragma endregion
+
+#pragma region Callbacks
+
+	///* Callbacks for input*/
+	//void Move(const FInputActionValue& Value);
+
+	void HandleGroundMovementInput(const FInputActionValue& Value);
+	void HandleClimbMovementInput(const FInputActionValue& Value);
+
+	/* Callbacks for input*/
+	void Look(const FInputActionValue& Value);
+
 	void OnClimbActionStarted(const FInputActionValue& Value);
-	
+
+	void OnClimbHopActionStarted(const FInputActionValue& Value);
+
 	/* Callbacks for input*/
 	void Crouch(const FInputActionValue& Value);
 	void Jump(const FInputActionValue& Value);
 	void EKeyPressed();
 	void Attack();
+
+#pragma endregion
+
+	// Called when the game starts or when spawned
+	virtual void BeginPlay() override;
 
 	/*
 	* Play Montage Functions

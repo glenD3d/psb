@@ -6,9 +6,14 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "CustomMovementComponent.generated.h"
 
-// FOrward Declares
+DECLARE_DELEGATE(FOnEnterClimbState)
+DECLARE_DELEGATE(FOnExitClimbState)
+
+
+// Forward Declares
 class UAnimMontage;
 class UAnimInstance;
+class APSB_Character;
 
 UENUM(BlueprintType)
 namespace ECustomMovementMode
@@ -26,6 +31,11 @@ UCLASS()
 class PSB_API UCustomMovementComponent : public UCharacterMovementComponent
 {
 	GENERATED_BODY()
+
+public:
+	FOnEnterClimbState OnEnterClimbStateDelegate;
+	FOnExitClimbState OnExitClimbStateDelegate;
+
 
 protected:
 
@@ -80,10 +90,16 @@ private:
 
 	bool CheckedHasReachedLedge();
 
+	void TryStartVaulting();
+
+	bool CanStartVaulting(FVector& OutVaultStartPosition, FVector& OutVaultLandPosition);
+
 	void PlayClimbMontage(UAnimMontage* MontageToPlay);
 
 	UFUNCTION()
 	void OnClimbMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+	void SetMotionWarpTarget(const FName& InWarpTargetName, const FVector& InTargetPosition);
 
 #pragma endregion
 
@@ -98,6 +114,8 @@ private:
 	UPROPERTY()
 	UAnimInstance* OwningPlayerAnimInstance;
 
+	UPROPERTY()
+	APSB_Character* OwningPlayerCharacter;
 
 #pragma endregion
 
@@ -137,10 +155,16 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Climbing", meta = (AllowPrivateAccess = "true"))
 	UAnimMontage* ClimbDownLedgeMontage;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Character Movement: Vault", meta = (AllowPrivateAccess = "true"))
+	UAnimMontage* VaultMontage;
+
 #pragma endregion
 	
 public:
 	void ToggleClimbing(bool bEnableClimb);
+
+	void RequestHopping();
+
 	bool IsClimbing() const;
 	FORCEINLINE FVector GetClimbableSurfaceNormal() const { return CurrentClimbableSurfaceNormal;  }
 	FVector GetUnrotatedClimbVelocity() const;
