@@ -4,8 +4,16 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "Abilities/GameplayAbility.h"
+
 #include "Logging/LogMacros.h"
 #include "PSBCharacter.generated.h"
+
+class UMG_AbilitySystemComponent;
+class UMG_AttributeSetBase;
+
+class UGameplayEffect;
+class UGameplayAbility;
 
 class USpringArmComponent;
 class UCameraComponent;
@@ -47,8 +55,33 @@ class APSBCharacter : public ACharacter
 public:
 	APSBCharacter();
 	
+	bool ApplyGameplayEffectToSelf(TSubclassOf<UGameplayEffect> Effect, FGameplayEffectContextHandle InEffectContext);
 
 protected:
+
+	void InitializeAttributes();
+	void GiveAbilities();
+	void ApplyStartupEffects();
+
+	virtual void PossessedBy(AController* NewController) override;
+	virtual void OnRep_PlayerState() override;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "GAS")
+	TSubclassOf<UGameplayEffect> DefaultAttributeSet;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "GAS")
+	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
+
+	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "GAS")
+	TArray<TSubclassOf<UGameplayEffect>> DefaultEffects;
+
+	UPROPERTY(EditDefaultsOnly)
+	UMG_AbilitySystemComponent* AbilitySystemComponent;
+
+	UPROPERTY(Transient)
+	UMG_AttributeSetBase* AttributeSet;
+
+
 
 	/** Called for movement input */
 	void Move(const FInputActionValue& Value);
