@@ -40,10 +40,6 @@
 			"Enabled": true
 		},
 		{
-			"Name": "promethean",
-			"Enabled": true
-		},
-		{
 			"Name": "GameplayAbilities",
 			"Enabled": true
 		}
