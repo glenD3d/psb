@@ -4,8 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "AbilitySystemInterface.h"
 #include "Abilities/GameplayAbility.h"
-
+#include "PSBGameTypes.h"
 #include "Logging/LogMacros.h"
 #include "PSBCharacter.generated.h"
 
@@ -24,7 +25,7 @@ struct FInputActionValue;
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
 UCLASS(config=Game)
-class APSBCharacter : public ACharacter
+class APSBCharacter : public ACharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
@@ -54,26 +55,20 @@ class APSBCharacter : public ACharacter
 
 public:
 	APSBCharacter();
+
+	virtual void PostInitializeComponents() override;
+
+	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	
 	bool ApplyGameplayEffectToSelf(TSubclassOf<UGameplayEffect> Effect, FGameplayEffectContextHandle InEffectContext);
 
 protected:
 
-	void InitializeAttributes();
 	void GiveAbilities();
 	void ApplyStartupEffects();
 
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void OnRep_PlayerState() override;
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "GAS")
-	TSubclassOf<UGameplayEffect> DefaultAttributeSet;
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "GAS")
-	TArray<TSubclassOf<UGameplayAbility>> DefaultAbilities;
-
-	UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "GAS")
-	TArray<TSubclassOf<UGameplayEffect>> DefaultEffects;
 
 	UPROPERTY(EditDefaultsOnly)
 	UMG_AbilitySystemComponent* AbilitySystemComponent;
@@ -102,5 +97,27 @@ public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+public:
+
+	UFUNCTION(BlueprintCallable)
+	FCharacterData GetCharacterData() const;
+
+	UFUNCTION(BlueprintCallable)
+	void SetCharacterData(const FCharacterData& InCharacterData);
+
+protected:
+	
+	UPROPERTY(ReplicatedUsing = OnRep_CharacterData)
+	FCharacterData CharacterData;
+
+	UFUNCTION()
+	void OnRep_CharacterData();
+
+	virtual void InitFromCharacterData(const FCharacterData& InCharacterData, bool bFromReplication = false);
+
+	UPROPERTY(EditDefaultsOnly)
+	class UCharacterDataAsset* CharacterDataAsset;
+
 };
 
