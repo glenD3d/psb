@@ -54,7 +54,9 @@ class APSBCharacter : public ACharacter, public IAbilitySystemInterface
 	UInputAction* LookAction;
 
 public:
-	APSBCharacter();
+
+	/** Constructor for AActor that takes an ObjectInitializer for backward compatibility */
+	APSBCharacter(const FObjectInitializer& ObjectInitializer);
 
 	virtual void PostInitializeComponents() override;
 
