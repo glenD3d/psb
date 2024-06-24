@@ -20,6 +20,7 @@
 #include "Net/UnrealNetwork.h"
 
 #include "ActorComponents/PSB_CharacterMovementComponent.h"
+#include "ActorComponents/FootstepsComponent.h"
 
 
 DEFINE_LOG_CATEGORY(LogTemplateCharacter);
@@ -71,6 +72,9 @@ APSBCharacter::APSBCharacter(const FObjectInitializer& ObjectInitializer) :
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
 	AttributeSet = CreateDefaultSubobject<UMG_AttributeSetBase>(TEXT("AttributeSet"));
+
+	FootstepsComponent = CreateDefaultSubobject<UFootstepsComponent>(TEXT("FootstepsComponent"));
+
 }
 
 void APSBCharacter::PostInitializeComponents()
