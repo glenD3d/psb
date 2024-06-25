@@ -37,11 +37,11 @@ void UFootstepsComponent::BeginPlay()
 	
 }
 
-void UFootstepsComponent::HandleFootstep(EFoot Foot);
+void UFootstepsComponent::HandleFootstep(EFoot Foot)
 {
 	if (APSBCharacter* Character = Cast<APSBCharacter>(GetOwner()))
 	{
-		const int32 DebugShowFootsteps = CVarShotFootsteps.GetValueOnAnyThread;
+		const int32 DebugShowFootsteps = CVarShowFootsteps.GetValueOnAnyThread();
 
 		if (USkeletalMeshComponent* Mesh = Character->GetMesh())
 		{
@@ -63,12 +63,11 @@ void UFootstepsComponent::HandleFootstep(EFoot Foot);
 
 						if (PhysicalMaterial)
 						{
-							UGameplayStatics::PlaySoundLocation(this, PhysicalMaterial->FootstepSound, Location, 1.f);
+							UGameplayStatics::PlaySoundAtLocation(this, PhysicalMaterial->FootstepSound, Location, 1.f);
 						}
 					}
 				}
 			}
-
 		}
 	}
 }

@@ -121,7 +121,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly)
 	class UCharacterDataAsset* CharacterDataAsset;
 
-	UPROPERTY(BlueprintCallable)
+	UPROPERTY(BlueprintReadOnly)
 	class UFootstepsComponent* FootstepsComponent;
 
 };
