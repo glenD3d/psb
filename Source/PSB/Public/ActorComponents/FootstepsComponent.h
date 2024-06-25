@@ -20,6 +20,12 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
+	UPROPERTY(EditDefaultsOnly)
+	FName LeftFootSocketName = TEXT("LeftFootSocketName");
+
+	UPROPERTY(EditDefaultsOnly)
+	FName RightFootSocketName = TEXT("RightFootSocketName");
+
 public:	
 
 	void HandleFootstep(EFoot Foot);
